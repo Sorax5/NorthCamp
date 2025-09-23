@@ -1,5 +1,6 @@
 package fr.phylisiumstudio.logic.activity.fabric;
 
+import com.google.inject.Singleton;
 import fr.phylisiumstudio.logic.activity.ActivityData;
 import fr.phylisiumstudio.logic.activity.ActivityType;
 import lombok.Getter;
@@ -10,6 +11,7 @@ import java.util.Map;
 /**
  * Fabric for managing different types of ActivityData associated with ActivityType.
  */
+@Singleton
 public class ActivityDataFabric {
     @Getter
     private final Map<ActivityType, ActivityData> activityDataMap;

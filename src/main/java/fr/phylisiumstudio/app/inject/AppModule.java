@@ -1,9 +1,7 @@
 package fr.phylisiumstudio.app.inject;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.inject.AbstractModule;
-import com.google.inject.Provides;
-import com.google.inject.Singleton;
+import com.google.inject.*;
 import fr.phylisiumstudio.app.inject.annotation.CampsiteRepositoryFile;
 import fr.phylisiumstudio.logic.activity.Activity;
 import fr.phylisiumstudio.logic.activity.fabric.ActivityDataFabric;
@@ -23,25 +21,21 @@ import java.util.logging.Logger;
  */
 public class AppModule extends AbstractModule {
 
-    private PlotDataFabric plotDataFabric;
-    private ActivityDataFabric activityDataFabric;
+    private final App app;
 
-    private Logger logger;
+    public AppModule(App app) {
+        this.app = app;
+    }
 
     @Override
     protected void configure() {
         super.configure();
 
-        PlotSerializer plotSerializer = new PlotSerializer(plotDataFabric, logger);
-        ActivitySerializer activitySerializer = new ActivitySerializer(activityDataFabric, logger);
-        Gson gson = new GsonBuilder()
-                .registerTypeAdapter(Plot.class, plotSerializer)
-                .registerTypeAdapter(Activity.class, activitySerializer)
-                .setPrettyPrinting()
-                .create();
-        bind(Gson.class).toInstance(gson);
-
         bind(ICampsiteRepository.class).to(JsonCampsiteRepository.class).in(Singleton.class);
+    }
+
+    public Injector getInjector() {
+        return Guice.createInjector(this);
     }
 
     @Provides
@@ -49,5 +43,11 @@ public class AppModule extends AbstractModule {
     @CampsiteRepositoryFile
     public File ProvideCampsiteRepositoryFile() {
         return new File("campsites");
+    }
+
+    @Provides
+    @Singleton
+    public GsonBuilder ProvideGsonBuilder() {
+        return app.getGsonBuilder();
     }
 }

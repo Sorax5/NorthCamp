@@ -1,6 +1,8 @@
 package fr.phylisiumstudio.storage.serialize;
 
 import com.google.gson.*;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import fr.phylisiumstudio.logic.activity.Activity;
 import fr.phylisiumstudio.logic.activity.ActivityData;
 import fr.phylisiumstudio.logic.activity.ActivityType;
@@ -11,6 +13,7 @@ import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+@Singleton
 public class ActivitySerializer implements JsonSerializer<Activity>, JsonDeserializer<Activity> {
 
     private final String UNIQUE_ID = "uniqueID";
@@ -19,6 +22,7 @@ public class ActivitySerializer implements JsonSerializer<Activity>, JsonDeseria
     private final ActivityDataFabric activityDataFabric;
     private final Logger logger;
 
+    @Inject
     public ActivitySerializer(ActivityDataFabric activityDataFabric, Logger logger) {
         this.activityDataFabric = activityDataFabric;
         this.logger = logger;

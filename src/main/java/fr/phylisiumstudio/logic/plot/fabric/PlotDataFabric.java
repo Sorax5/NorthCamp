@@ -2,6 +2,7 @@ package fr.phylisiumstudio.logic.plot.fabric;
 
 import fr.phylisiumstudio.logic.plot.PlotData;
 import fr.phylisiumstudio.logic.plot.PlotType;
+import jakarta.inject.Singleton;
 import lombok.Getter;
 
 import java.util.EnumMap;
@@ -10,6 +11,7 @@ import java.util.Map;
 /**
  * Fabric for managing different types of PlotData associated with PlotType.
  */
+@Singleton
 public class PlotDataFabric {
     @Getter
     private final Map<PlotType, PlotData> plotDataMap;

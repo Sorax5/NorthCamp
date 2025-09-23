@@ -1,4 +1,4 @@
 package fr.phylisiumstudio.logic.activity;
 
-public record ActivityData(String name, ActivityType type) {
+public record ActivityData(ActivityType type) {
 }

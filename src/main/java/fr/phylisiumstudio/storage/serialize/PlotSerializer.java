@@ -1,6 +1,8 @@
 package fr.phylisiumstudio.storage.serialize;
 
 import com.google.gson.*;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import fr.phylisiumstudio.logic.plot.Plot;
 import fr.phylisiumstudio.logic.plot.PlotData;
 import fr.phylisiumstudio.logic.plot.PlotType;
@@ -10,6 +12,7 @@ import java.lang.reflect.Type;
 import java.util.UUID;
 import java.util.logging.Logger;
 
+@Singleton
 public class PlotSerializer implements JsonSerializer<Plot>, JsonDeserializer<Plot> {
 
     private final String UNIQUE_ID = "uniqueID";
@@ -18,6 +21,7 @@ public class PlotSerializer implements JsonSerializer<Plot>, JsonDeserializer<Pl
     private final PlotDataFabric plotDataFabric;
     private final Logger logger;
 
+    @Inject
     public PlotSerializer(PlotDataFabric plotDataFabric, Logger logger) {
         this.plotDataFabric = plotDataFabric;
         this.logger = logger;

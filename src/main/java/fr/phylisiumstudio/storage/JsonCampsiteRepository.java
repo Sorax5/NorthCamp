@@ -33,14 +33,14 @@ public class JsonCampsiteRepository implements ICampsiteRepository {
     @Inject
     public JsonCampsiteRepository(@CampsiteRepositoryFile File folder,
                                   Logger logger,
-                                  Gson gson) {
+                                  GsonBuilder gsonBuilder) {
         this.logger = logger;
         this.folder = folder;
         if (!this.folder.exists() && !this.folder.mkdirs()) {
             this.logger.log(Level.WARNING, "Unable to create campsite folder.");
         }
 
-        this.gson = gson;
+        this.gson = gsonBuilder.create();
     }
 
     @Override
