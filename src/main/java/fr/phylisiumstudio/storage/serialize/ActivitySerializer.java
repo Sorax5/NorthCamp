@@ -7,6 +7,8 @@ import fr.phylisiumstudio.logic.activity.Activity;
 import fr.phylisiumstudio.logic.activity.ActivityData;
 import fr.phylisiumstudio.logic.activity.ActivityType;
 import fr.phylisiumstudio.logic.activity.fabric.ActivityDataFabric;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 import java.lang.reflect.Type;
 import java.util.UUID;
@@ -18,6 +20,7 @@ public class ActivitySerializer implements JsonSerializer<Activity>, JsonDeseria
 
     private final String UNIQUE_ID = "uniqueID";
     private final String TYPE = "type";
+    private final String POSITION = "position";
 
     private final ActivityDataFabric activityDataFabric;
     private final Logger logger;
@@ -40,7 +43,9 @@ public class ActivitySerializer implements JsonSerializer<Activity>, JsonDeseria
             ActivityType activityTypeEnum = ActivityType.valueOf(activityType);
             ActivityData activityData = activityDataFabric.getActivityData(activityTypeEnum);
 
-            return new Activity(activityUUID, activityData);
+            Vector3d position = jsonDeserializationContext.deserialize(jsonObject.get(POSITION), Vector3d.class);
+
+            return new Activity(activityUUID, activityData, position);
         }
         catch (Exception e) {
             logger.log(Level.WARNING, "Could not deserialize activity", e);
@@ -54,6 +59,8 @@ public class ActivitySerializer implements JsonSerializer<Activity>, JsonDeseria
             JsonObject jsonObject = new JsonObject();
             jsonObject.addProperty(UNIQUE_ID, activity.getUniqueID().toString());
             jsonObject.addProperty(TYPE, activity.getActivityData().type().toString());
+            
+            jsonObject.add(POSITION, jsonSerializationContext.serialize(activity.getPosition()));
 
             return jsonObject;
         }

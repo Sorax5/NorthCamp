@@ -1,4 +1,6 @@
 package fr.phylisiumstudio.logic.activity;
 
-public record ActivityData(ActivityType type) {
+import fr.phylisiumstudio.logic.area.Area;
+
+public record ActivityData(ActivityType type, Area area) {
 }

@@ -5,10 +5,7 @@ import fr.phylisiumstudio.logic.Campsite;
 import fr.phylisiumstudio.logic.repository.ICampsiteRepository;
 import lombok.Getter;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 public class CampsiteService {
     @Getter
@@ -47,5 +44,12 @@ public class CampsiteService {
 
     public Campsite getCampsite(UUID campsiteID) {
         return campsites.get(campsiteID);
+    }
+
+    public Optional<Campsite> getCampsiteByOwner(UUID uuid) {
+        return campsites.values()
+                .stream()
+                .filter(campsite -> campsite.getOwnerID().equals(uuid))
+                .findFirst();
     }
 }

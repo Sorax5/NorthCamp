@@ -9,10 +9,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+@Getter
 public class Campsite {
-    @Getter
     private final UUID uniqueID;
-    @Getter
     private final UUID ownerID;
 
     private List<Activity> activities = new ArrayList<>();
