@@ -150,8 +150,8 @@ public class App {
                 plotDataFabric.registerPlotData(plotData.type(), plotData);
             }
 
-            builderFabric.registerBuilder(PlotData.class, new PlotBuilder<>());
-            builderFabric.registerBuilder(ActivityData.class, new ActivityBuilder<>());
+            builderFabric.registerBuilder(PlotData.class, new PlotBuilder());
+            builderFabric.registerBuilder(ActivityData.class, new ActivityBuilder());
         }
         catch (Exception e) {
             logger.log(Level.WARNING, "Error loading data", e);
