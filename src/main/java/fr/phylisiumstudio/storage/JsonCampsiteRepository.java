@@ -31,14 +31,16 @@ public class JsonCampsiteRepository implements ICampsiteRepository {
     private final Logger logger;
 
     @Inject
-    public JsonCampsiteRepository(@CampsiteRepositoryFile File folder,
-                                  Logger logger,
-                                  GsonBuilder gsonBuilder) {
+    public JsonCampsiteRepository(@CampsiteRepositoryFile File folder, Logger logger, GsonBuilder gsonBuilder, PlotSerializer plotSerializer, ActivitySerializer activitySerializer)
+    {
         this.logger = logger;
         this.folder = folder;
         if (!this.folder.exists() && !this.folder.mkdirs()) {
             this.logger.log(Level.WARNING, "Unable to create campsite folder.");
         }
+
+        gsonBuilder.registerTypeAdapter(Plot.class, plotSerializer);
+        gsonBuilder.registerTypeAdapter(Activity.class, activitySerializer);
 
         this.gson = gsonBuilder.create();
     }

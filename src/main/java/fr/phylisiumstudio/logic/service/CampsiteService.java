@@ -17,7 +17,9 @@ public class CampsiteService {
     @Inject
     public CampsiteService(ICampsiteRepository campsiteRepository) {
         this.campsiteRepository = campsiteRepository;
+    }
 
+    public void loadCampsites() {
         List<Campsite> loadedCampsites = campsiteRepository.list().join();
         this.campsites = loadedCampsites.stream().collect(
                 HashMap::new,

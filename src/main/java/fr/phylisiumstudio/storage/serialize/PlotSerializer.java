@@ -40,6 +40,9 @@ public class PlotSerializer implements JsonSerializer<Plot>, JsonDeserializer<Pl
             String plotType = jsonObject.get(TYPE).getAsString();
             PlotType plotTypeEnum = PlotType.valueOf(plotType);
             PlotData plotData = plotDataFabric.getPlotData(plotTypeEnum);
+            if (plotData == null) {
+                throw new JsonParseException("Unknown plot type: " + plotType);
+            }
 
             Vector3d position = jsonDeserializationContext.deserialize(jsonObject.get(POSITION), Vector3d.class);
 

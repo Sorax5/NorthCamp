@@ -1,9 +1,14 @@
 package fr.phylisiumstudio.logic.area;
 
+import fr.phylisiumstudio.logic.mapper.VectorMapper;
 import lombok.Data;
 import org.joml.Vector2d;
+import org.joml.Vector2i;
 import org.joml.Vector3d;
 import org.joml.Vector3i;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 public class Area {
@@ -44,5 +49,25 @@ public class Area {
                 Math.max(firstCorner.y, secondCorner.y),
                 Math.max(firstCorner.z, secondCorner.z)
         );
+    }
+
+    public List<Vector3i> getAll(Vector3i base) {
+        Vector3d min = getMinCorner();
+        Vector3d max = getMaxCorner();
+
+        List<Vector3i> blocks = new ArrayList<>();
+
+        Vector3i minInt = VectorMapper.toVector3i(min);
+        Vector3i maxInt = VectorMapper.toVector3i(max);
+
+        for (int x = minInt.x; x <= maxInt.x; x++) {
+            for (int y = minInt.y; y <= maxInt.y; y++) {
+                for (int z = minInt.z; z <= maxInt.z; z++) {
+                    blocks.add(new Vector3i(x + base.x, y + base.y, z + base.z));
+                }
+            }
+        }
+
+        return blocks;
     }
 }

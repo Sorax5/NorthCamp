@@ -62,10 +62,6 @@ public class App {
     private MainConfig mainConfig;
 
     @Inject
-    private ActivitySerializer activitySerializer;
-    @Inject
-    private PlotSerializer plotSerializer;
-    @Inject
     private PlotDataFabric plotDataFabric;
     @Inject
     private ActivityDataFabric activityDataFabric;
@@ -92,9 +88,6 @@ public class App {
         try {
             this.appModule = new AppModule(this);
             appModule.getInjector().injectMembers(this);
-
-            gsonBuilder.registerTypeAdapter(Plot.class, plotSerializer);
-            gsonBuilder.registerTypeAdapter(Activity.class, activitySerializer);
         }
         catch (Exception e) {
             logger.log(Level.WARNING, "Error setting up Guice", e);
@@ -144,7 +137,7 @@ public class App {
     public void LoadData() {
         logger.info("Loading data...");
         try {
-            Area defaultArea = new Area(new Vector3d(0,0,0), new Vector3d(8,8,8));
+            Area defaultArea = new Area(new Vector3d(0,0,0), new Vector3d(6,4,6));
 
             for (ActivityType value : ActivityType.values()) {
                 ActivityData activityData = new ActivityData(value, defaultArea);
@@ -158,6 +151,8 @@ public class App {
 
             builderFabric.register("plot", PlotBuilder::new);
             builderFabric.register("activity", ActivityBuilder::new);
+
+            campsiteService.loadCampsites();
         }
         catch (Exception e) {
             logger.log(Level.WARNING, "Error loading data", e);
@@ -191,7 +186,7 @@ public class App {
                 InstanceContainer instanceContainer = instanceService.getInstance(campsite.getUniqueID());
 
                 event.setSpawningInstance(instanceContainer);
-                player.setRespawnPoint(new Pos(28, 69, 207));
+                player.setRespawnPoint(new Pos(0, 70, 0));
 
                 //player.setFlying(true);
 
