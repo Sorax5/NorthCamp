@@ -7,6 +7,7 @@ import fr.phylisiumstudio.logic.plot.Plot;
 import fr.phylisiumstudio.logic.plot.PlotData;
 import fr.phylisiumstudio.logic.plot.PlotType;
 import fr.phylisiumstudio.logic.plot.fabric.PlotDataFabric;
+import org.joml.Vector3d;
 
 import java.lang.reflect.Type;
 import java.util.UUID;
@@ -17,6 +18,7 @@ public class PlotSerializer implements JsonSerializer<Plot>, JsonDeserializer<Pl
 
     private final String UNIQUE_ID = "uniqueID";
     private final String TYPE = "type";
+    private final String POSITION = "position";
 
     private final PlotDataFabric plotDataFabric;
     private final Logger logger;
@@ -39,7 +41,9 @@ public class PlotSerializer implements JsonSerializer<Plot>, JsonDeserializer<Pl
             PlotType plotTypeEnum = PlotType.valueOf(plotType);
             PlotData plotData = plotDataFabric.getPlotData(plotTypeEnum);
 
-            return new Plot(plotUUID, plotData);
+            Vector3d position = jsonDeserializationContext.deserialize(jsonObject.get(POSITION), Vector3d.class);
+
+            return new Plot(plotUUID, plotData, position);
         }
         catch (Exception e) {
             logger.warning("Could not deserialize plot");
@@ -53,6 +57,7 @@ public class PlotSerializer implements JsonSerializer<Plot>, JsonDeserializer<Pl
             JsonObject jsonObject = new JsonObject();
             jsonObject.addProperty(UNIQUE_ID, plot.getUniqueID().toString());
             jsonObject.addProperty(TYPE, plot.getPlotData().type().toString());
+            jsonObject.add(POSITION, jsonSerializationContext.serialize(plot.getPosition()));
             return jsonObject;
         }
         catch (Exception e) {

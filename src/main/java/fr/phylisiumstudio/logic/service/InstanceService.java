@@ -26,7 +26,7 @@ public class InstanceService {
         this.app = app;
         this.instanceFolder = new File(app.getDataFolder(), "instance");
         if (!instanceFolder.exists() && !instanceFolder.mkdirs()) {
-                        app.getLogger().warning("Failed to create instance folder: " + instanceFolder.getAbsolutePath());
+            app.getLogger().warning("Failed to create instance folder: " + instanceFolder.getAbsolutePath());
         }
     }
 

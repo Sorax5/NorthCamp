@@ -3,6 +3,7 @@ package fr.phylisiumstudio.app;
 import com.google.gson.GsonBuilder;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import fr.phylisiumstudio.app.commands.ShutdownCommand;
 import fr.phylisiumstudio.app.config.MainConfig;
 import fr.phylisiumstudio.app.inject.AppModule;
 import fr.phylisiumstudio.logic.Campsite;
@@ -18,11 +19,13 @@ import fr.phylisiumstudio.logic.plot.Plot;
 import fr.phylisiumstudio.logic.plot.PlotData;
 import fr.phylisiumstudio.logic.plot.PlotType;
 import fr.phylisiumstudio.logic.plot.fabric.PlotDataFabric;
+import fr.phylisiumstudio.logic.service.BuilderService;
 import fr.phylisiumstudio.logic.service.CampsiteService;
 import fr.phylisiumstudio.logic.service.InstanceService;
 import fr.phylisiumstudio.storage.serialize.ActivitySerializer;
 import fr.phylisiumstudio.storage.serialize.PlotSerializer;
 import lombok.Getter;
+import net.kyori.adventure.text.Component;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.coordinate.Pos;
 import net.minestom.server.entity.Player;
@@ -41,6 +44,7 @@ import java.io.File;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -71,6 +75,8 @@ public class App {
     private InstanceService instanceService;
     @Inject
     private CampsiteService campsiteService;
+    @Inject
+    private BuilderService builderService;
 
     public App() {
         gsonBuilder =  new GsonBuilder()
@@ -146,12 +152,12 @@ public class App {
             }
 
             for (PlotType value : PlotType.values()) {
-                PlotData plotData = new PlotData(value);
+                PlotData plotData = new PlotData(value, defaultArea);
                 plotDataFabric.registerPlotData(plotData.type(), plotData);
             }
 
-            builderFabric.registerBuilder(PlotData.class, new PlotBuilder());
-            builderFabric.registerBuilder(ActivityData.class, new ActivityBuilder());
+            builderFabric.register("plot", PlotBuilder::new);
+            builderFabric.register("activity", ActivityBuilder::new);
         }
         catch (Exception e) {
             logger.log(Level.WARNING, "Error loading data", e);
@@ -177,21 +183,49 @@ public class App {
                             return newCampsite;
                         });
 
+                if(campsite.getPlots().isEmpty()) {
+                    Plot plot = new Plot(plotDataFabric.getPlotData(PlotType.CAMPSITE), new Vector3d(30, 69, 207));
+                    campsite.addPlot(plot);
+                }
+
                 InstanceContainer instanceContainer = instanceService.getInstance(campsite.getUniqueID());
 
                 event.setSpawningInstance(instanceContainer);
                 player.setRespawnPoint(new Pos(28, 69, 207));
+
+                //player.setFlying(true);
+
+                CompletableFuture<Void> future = builderService.BuildCampsiteAsync(campsite);
+                future.join();
+                /*future.thenAccept(result -> {
+                    Component message = Component.text("Campsite loaded!");
+                    player.sendActionBar(message);
+                });*/
             });
 
             globalEventHandler.addListener(PlayerBlockBreakEvent.class, event -> {
                 event.setCancelled(true);
             });
 
+            MinecraftServer.getCommandManager().register(new ShutdownCommand());
             server.start(address);
             logger.info("Server started on " + address.toString());
         }
         catch (Exception e) {
             logger.log(Level.WARNING, "Error starting server", e);
+        }
+    }
+
+    public void OnDisable() {
+        try {
+            logger.info("Saving data...");
+            campsiteService.saveCampsite();
+        }
+        catch (Exception e) {
+            logger.log(Level.WARNING, "Error saving data", e);
+        }
+        finally {
+            logger.info("Data saved.");
         }
     }
 }

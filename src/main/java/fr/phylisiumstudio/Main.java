@@ -10,5 +10,8 @@ public class Main {
         app.SetupGuice();
         app.LoadData();
         app.StartServer();
+
+        Runtime.getRuntime().addShutdownHook(new Thread(app::OnDisable));
     }
+
 }

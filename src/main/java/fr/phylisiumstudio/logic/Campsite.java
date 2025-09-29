@@ -23,4 +23,12 @@ public class Campsite {
         this.uniqueID = UUID.randomUUID();
         this.ownerID = ownerID;
     }
+
+    public void addActivity(Activity activity) {
+        this.activities.add(activity);
+    }
+
+    public  void addPlot(Plot plot) {
+        this.plots.add(plot);
+    }
 }

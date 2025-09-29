@@ -32,6 +32,7 @@ public class AppModule extends AbstractModule {
         bind(InstanceManager.class).toInstance(app.getInstanceManager());
         bind(App.class).toInstance(app);
         bind(MainConfig.class).toInstance(app.getMainConfig());
+        bind(GsonBuilder.class).toInstance(app.getGsonBuilder());
     }
 
     public Injector getInjector() {
@@ -43,11 +44,5 @@ public class AppModule extends AbstractModule {
     @CampsiteRepositoryFile
     public File ProvideCampsiteRepositoryFile() {
         return new File(app.getDataFolder(), "campsites");
-    }
-
-    @Provides
-    @Singleton
-    public GsonBuilder ProvideGsonBuilder() {
-        return app.getGsonBuilder();
     }
 }

@@ -1,4 +1,6 @@
 package fr.phylisiumstudio.logic.plot;
 
-public record PlotData (PlotType type) {
+import fr.phylisiumstudio.logic.area.Area;
+
+public record PlotData (PlotType type, Area area) {
 }
