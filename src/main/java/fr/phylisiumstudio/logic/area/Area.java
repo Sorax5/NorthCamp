@@ -1,7 +1,9 @@
 package fr.phylisiumstudio.logic.area;
 
 import fr.phylisiumstudio.logic.mapper.VectorMapper;
+import lombok.AccessLevel;
 import lombok.Data;
+import lombok.Getter;
 import org.joml.Vector2d;
 import org.joml.Vector2i;
 import org.joml.Vector3d;
@@ -9,11 +11,19 @@ import org.joml.Vector3i;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
 
 @Data
 public class Area {
     private final Vector3d firstCorner;
     private final Vector3d secondCorner;
+
+    private final Predicate<Vector3i> IS_GROUND_BLOCK = (vec) -> vec.y == getMinCorner().y;
+
+    private final Predicate<Vector3i> IS_WALL_BLOCK = (vec) ->
+        (vec.x == getMinCorner().x || vec.x == getMaxCorner().x ||
+         vec.z == getMinCorner().z || vec.z == getMaxCorner().z) &&
+        (vec.y >= getMinCorner().y && vec.y <= getMaxCorner().y);
 
     public Iterable<Vector3i> getBlocksIterator() {
         return () -> new AreaBlockIterator(this);
@@ -51,6 +61,16 @@ public class Area {
         );
     }
 
+    public Vector3d getSize() {
+        Vector3d min = getMinCorner();
+        Vector3d max = getMaxCorner();
+        return new Vector3d(
+                Math.abs(max.x - min.x) + 1,
+                Math.abs(max.y - min.y) + 1,
+                Math.abs(max.z - min.z) + 1
+        );
+    }
+
     public List<Vector3i> getAll(Vector3i base) {
         Vector3d min = getMinCorner();
         Vector3d max = getMaxCorner();
@@ -69,5 +89,13 @@ public class Area {
         }
 
         return blocks;
+    }
+
+    public boolean isWallBlock(Vector3i position) {
+        return IS_WALL_BLOCK.test(position);
+    }
+
+    public boolean isGroundBlock(Vector3i position) {
+        return IS_GROUND_BLOCK.test(position);
     }
 }

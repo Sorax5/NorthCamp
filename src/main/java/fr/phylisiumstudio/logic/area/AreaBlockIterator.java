@@ -1,10 +1,12 @@
 package fr.phylisiumstudio.logic.area;
 
 import fr.phylisiumstudio.logic.mapper.VectorMapper;
+import lombok.Getter;
 import org.joml.Vector3i;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
+@Getter
 public class AreaBlockIterator implements Iterator<Vector3i> {
     private final Vector3i min;
     private final Vector3i max;

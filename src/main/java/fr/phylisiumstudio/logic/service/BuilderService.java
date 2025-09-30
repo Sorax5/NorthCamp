@@ -20,19 +20,15 @@ import java.util.concurrent.CompletableFuture;
 public class BuilderService {
     private final InstanceManager instanceManager;
     private final BuilderFabric builderFabric;
-    private final InstanceService instanceService;
 
     @Inject
-    public BuilderService(InstanceManager instanceManager, BuilderFabric builderFabric, InstanceService instanceService) {
+    public BuilderService(InstanceManager instanceManager, BuilderFabric builderFabric) {
         this.instanceManager = instanceManager;
         this.builderFabric = builderFabric;
-        this.instanceService = instanceService;
     }
 
-    public CompletableFuture<Void> BuildCampsiteAsync(Campsite campsite) {
+    public CompletableFuture<Void> BuildCampsiteAsync(Campsite campsite, InstanceContainer instanceContainer) {
         List<CompletableFuture<Void>> futures = new ArrayList<>();
-
-        InstanceContainer instanceContainer = instanceService.getInstance(campsite.getUniqueID());
 
         for (Activity activity : campsite.getActivities()) {
             Builder<ActivityData, Activity, InstanceContainer> builder = builderFabric.create("activity");

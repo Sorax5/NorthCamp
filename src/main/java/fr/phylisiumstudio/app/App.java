@@ -7,6 +7,7 @@ import fr.phylisiumstudio.app.commands.ShutdownCommand;
 import fr.phylisiumstudio.app.config.MainConfig;
 import fr.phylisiumstudio.app.inject.AppModule;
 import fr.phylisiumstudio.logic.Campsite;
+import fr.phylisiumstudio.logic.IApplication;
 import fr.phylisiumstudio.logic.activity.Activity;
 import fr.phylisiumstudio.logic.activity.ActivityData;
 import fr.phylisiumstudio.logic.activity.ActivityType;
@@ -15,16 +16,20 @@ import fr.phylisiumstudio.logic.area.Area;
 import fr.phylisiumstudio.logic.builder.ActivityBuilder;
 import fr.phylisiumstudio.logic.builder.PlotBuilder;
 import fr.phylisiumstudio.logic.builder.fabric.BuilderFabric;
+import fr.phylisiumstudio.logic.mapper.PositionMapper;
 import fr.phylisiumstudio.logic.plot.Plot;
 import fr.phylisiumstudio.logic.plot.PlotData;
 import fr.phylisiumstudio.logic.plot.PlotType;
 import fr.phylisiumstudio.logic.plot.fabric.PlotDataFabric;
+import fr.phylisiumstudio.logic.schematic.SchematicFactory;
 import fr.phylisiumstudio.logic.service.BuilderService;
 import fr.phylisiumstudio.logic.service.CampsiteService;
 import fr.phylisiumstudio.logic.service.InstanceService;
 import fr.phylisiumstudio.storage.serialize.ActivitySerializer;
 import fr.phylisiumstudio.storage.serialize.PlotSerializer;
 import lombok.Getter;
+import net.hollowcube.schem.Schematic;
+import net.hollowcube.schem.SchematicReader;
 import net.kyori.adventure.text.Component;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.coordinate.Pos;
@@ -32,10 +37,10 @@ import net.minestom.server.entity.Player;
 import net.minestom.server.event.GlobalEventHandler;
 import net.minestom.server.event.player.AsyncPlayerConfigurationEvent;
 import net.minestom.server.event.player.PlayerBlockBreakEvent;
+import net.minestom.server.instance.Chunk;
 import net.minestom.server.instance.InstanceContainer;
 import net.minestom.server.instance.InstanceManager;
 import org.joml.Vector3d;
-import org.joml.Vector3i;
 import org.spongepowered.configurate.CommentedConfigurationNode;
 import org.spongepowered.configurate.yaml.NodeStyle;
 import org.spongepowered.configurate.yaml.YamlConfigurationLoader;
@@ -43,6 +48,11 @@ import org.spongepowered.configurate.yaml.YamlConfigurationLoader;
 import java.io.File;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
@@ -50,7 +60,7 @@ import java.util.logging.Logger;
 
 @Singleton
 @Getter
-public class App {
+public class App implements IApplication {
 
     private AppModule appModule;
     private final GsonBuilder gsonBuilder;
@@ -61,6 +71,10 @@ public class App {
     private final Logger logger;
     private MainConfig mainConfig;
 
+    @Inject
+    private ActivitySerializer activitySerializer;
+    @Inject
+    private PlotSerializer plotSerializer;
     @Inject
     private PlotDataFabric plotDataFabric;
     @Inject
@@ -73,6 +87,8 @@ public class App {
     private CampsiteService campsiteService;
     @Inject
     private BuilderService builderService;
+    @Inject
+    private SchematicFactory schematicFactory;
 
     public App() {
         gsonBuilder =  new GsonBuilder()
@@ -81,6 +97,53 @@ public class App {
 
         if (!dataFolder.exists() && !dataFolder.mkdirs()) {
             logger.warning("Could not create data folder");
+        }
+    }
+
+    @Override
+    public void OnEnable() {
+        SetupServer();
+        LoadConfig();
+        SetupGuice();
+        loadSchematics();
+        LoadData();
+        StartServer();
+    }
+
+    @Override
+    public void OnDisable() {
+        try {
+            logger.info("Saving data...");
+            campsiteService.saveCampsite();
+        }
+        catch (Exception e) {
+            logger.log(Level.WARNING, "Error saving data", e);
+        }
+        finally {
+            logger.info("Data saved.");
+        }
+    }
+
+    private void loadSchematics() {
+        try {
+            SchematicReader schematicReader = new SchematicReader();
+            File schematicsFolder = new File(dataFolder, "schem");
+            if (!schematicsFolder.exists() && !schematicsFolder.mkdirs()) {
+                throw new RuntimeException("Failed to create schematics folder: " + schematicsFolder.getAbsolutePath());
+            }
+
+            List<File> schematicFiles = Files.walk(schematicsFolder.toPath(), 1)
+                    .filter(Files::isRegularFile)
+                    .map(Path::toFile)
+                    .toList();
+
+            for (File schematicFile : schematicFiles) {
+                Schematic schematic = schematicReader.read(Paths.get(schematicFile.getAbsolutePath()));
+                schematicFactory.registerSchematic(schematicFile.getName(), schematic);
+            }
+        }
+        catch (Exception e) {
+            logger.log(Level.WARNING, "Error loading schematics", e);
         }
     }
 
@@ -137,7 +200,7 @@ public class App {
     public void LoadData() {
         logger.info("Loading data...");
         try {
-            Area defaultArea = new Area(new Vector3d(0,0,0), new Vector3d(6,4,6));
+            Area defaultArea = new Area(new Vector3d(0,0,0), new Vector3d(8,6,8));
 
             for (ActivityType value : ActivityType.values()) {
                 ActivityData activityData = new ActivityData(value, defaultArea);
@@ -149,7 +212,7 @@ public class App {
                 plotDataFabric.registerPlotData(plotData.type(), plotData);
             }
 
-            builderFabric.register("plot", PlotBuilder::new);
+            builderFabric.register("plot", () -> new PlotBuilder(schematicFactory.getSchematic("camp_1.schem")));
             builderFabric.register("activity", ActivityBuilder::new);
 
             campsiteService.loadCampsites();
@@ -170,6 +233,7 @@ public class App {
             globalEventHandler.addListener(AsyncPlayerConfigurationEvent.class, event -> {
                 final Player player = event.getPlayer();
 
+
                 Optional<Campsite> optionalCampsite = campsiteService.getCampsiteByOwner(player.getUuid());
                 Campsite campsite = optionalCampsite
                         .orElseGet(() -> {
@@ -178,20 +242,20 @@ public class App {
                             return newCampsite;
                         });
 
+                Vector3d spawnPoint = new Vector3d(0, 69, 0);
                 if(campsite.getPlots().isEmpty()) {
-                    Plot plot = new Plot(plotDataFabric.getPlotData(PlotType.CAMPSITE), new Vector3d(30, 69, 207));
-                    campsite.addPlot(plot);
+                    PlotData plotData = plotDataFabric.getPlotData(PlotType.CAMPSITE);
+                    for (int i = 0; i < 5; i++) {
+                        Vector3d offset = new Vector3d(spawnPoint);
+                        Plot plot = new Plot(plotData, offset.add(0,-1, i * (plotData.area().getSize().z + 5)));
+                        campsite.addPlot(plot);
+                    }
                 }
 
-                InstanceContainer instanceContainer = instanceService.getInstance(campsite.getUniqueID());
+                InstanceContainer instanceContainer = instanceService.getInstance(campsite);
 
                 event.setSpawningInstance(instanceContainer);
-                player.setRespawnPoint(new Pos(0, 70, 0));
-
-                //player.setFlying(true);
-
-                CompletableFuture<Void> future = builderService.BuildCampsiteAsync(campsite);
-                future.join();
+                player.setRespawnPoint(PositionMapper.toMinestomPos(spawnPoint));
                 /*future.thenAccept(result -> {
                     Component message = Component.text("Campsite loaded!");
                     player.sendActionBar(message);
@@ -208,19 +272,6 @@ public class App {
         }
         catch (Exception e) {
             logger.log(Level.WARNING, "Error starting server", e);
-        }
-    }
-
-    public void OnDisable() {
-        try {
-            logger.info("Saving data...");
-            campsiteService.saveCampsite();
-        }
-        catch (Exception e) {
-            logger.log(Level.WARNING, "Error saving data", e);
-        }
-        finally {
-            logger.info("Data saved.");
         }
     }
 }
