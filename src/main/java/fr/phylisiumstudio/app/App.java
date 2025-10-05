@@ -54,6 +54,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -212,7 +213,7 @@ public class App implements IApplication {
                 plotDataFabric.registerPlotData(plotData.type(), plotData);
             }
 
-            builderFabric.register("plot", () -> new PlotBuilder(schematicFactory.getSchematic("camp_1.schem")));
+            builderFabric.register("plot", () -> new PlotBuilder(schematicFactory));
             builderFabric.register("activity", ActivityBuilder::new);
 
             campsiteService.loadCampsites();
@@ -244,7 +245,11 @@ public class App implements IApplication {
 
                 Vector3d spawnPoint = new Vector3d(0, 69, 0);
                 if(campsite.getPlots().isEmpty()) {
-                    PlotData plotData = plotDataFabric.getPlotData(PlotType.CAMPSITE);
+                    Random random = new Random();
+                    PlotData campData = plotDataFabric.getPlotData(PlotType.CAMPSITE);
+                    PlotData carData = plotDataFabric.getPlotData(PlotType.CARAVAN);
+
+                    PlotData plotData = random.nextBoolean() ? campData : carData;
                     for (int i = 0; i < 5; i++) {
                         Vector3d offset = new Vector3d(spawnPoint);
                         Plot plot = new Plot(plotData, offset.add(0,-1, i * (plotData.area().getSize().z + 5)));
@@ -256,10 +261,6 @@ public class App implements IApplication {
 
                 event.setSpawningInstance(instanceContainer);
                 player.setRespawnPoint(PositionMapper.toMinestomPos(spawnPoint));
-                /*future.thenAccept(result -> {
-                    Component message = Component.text("Campsite loaded!");
-                    player.sendActionBar(message);
-                });*/
             });
 
             globalEventHandler.addListener(PlayerBlockBreakEvent.class, event -> {
