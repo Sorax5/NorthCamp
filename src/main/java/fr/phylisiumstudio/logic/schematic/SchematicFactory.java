@@ -15,10 +15,16 @@ public class SchematicFactory {
     }
 
     public void registerSchematic(String name, Schematic schematic) {
+        if (schematics.containsKey(name)) {
+            throw new IllegalArgumentException("Schematic already registered: " + name);
+        }
         schematics.put(name, schematic);
     }
 
     public Schematic getSchematic(String name) {
+        if(!schematics.containsKey(name)) {
+            throw new IllegalArgumentException("Schematic not found: " + name);
+        }
         return schematics.get(name);
     }
 }
