@@ -1,6 +1,7 @@
 package fr.phylisiumstudio.logic;
 
 import fr.phylisiumstudio.logic.activity.Activity;
+import fr.phylisiumstudio.logic.client.Client;
 import fr.phylisiumstudio.logic.plot.Booking;
 import fr.phylisiumstudio.logic.plot.Plot;
 import lombok.Getter;
@@ -28,7 +29,7 @@ public class Campsite {
         this.activities.add(activity);
     }
 
-    public  void addPlot(Plot plot) {
+    public void addPlot(Plot plot) {
         this.plots.add(plot);
     }
 }

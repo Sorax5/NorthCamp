@@ -39,7 +39,7 @@ public class PlotBuilder extends MinestomBuilder<PlotData, Plot> {
             String schematicName = schematicMap.get(data.type());
             Schematic schematic = schematicFactory.getSchematic(schematicName);
 
-            RelativeBlockBatch batch = schematic.build(Rotation.NONE, false);
+            RelativeBlockBatch batch = schematic.build(Rotation.NONE, true);
             batch.apply(instance, PositionMapper.toMinestomPos(state.getPosition()), () -> {
                 Area area = data.area();
 
