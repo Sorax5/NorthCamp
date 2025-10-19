@@ -6,6 +6,7 @@ import com.google.inject.Singleton;
 import fr.phylisiumstudio.app.commands.ShutdownCommand;
 import fr.phylisiumstudio.app.config.MainConfig;
 import fr.phylisiumstudio.app.inject.AppModule;
+import fr.phylisiumstudio.app.view.CampsiteView;
 import fr.phylisiumstudio.logic.Campsite;
 import fr.phylisiumstudio.logic.IApplication;
 import fr.phylisiumstudio.logic.activity.Activity;
@@ -88,6 +89,8 @@ public class App implements IApplication {
     private BuilderService builderService;
     @Inject
     private SchematicFactory schematicFactory;
+
+    private CampsiteView campsiteView;
 
     public App() {
         gsonBuilder =  new GsonBuilder()
@@ -228,42 +231,7 @@ public class App implements IApplication {
         try {
             SocketAddress address = new InetSocketAddress(mainConfig.Host, mainConfig.Port);
 
-            GlobalEventHandler globalEventHandler = MinecraftServer.getGlobalEventHandler();
-            globalEventHandler.addListener(AsyncPlayerConfigurationEvent.class, event -> {
-                final Player player = event.getPlayer();
-
-
-                Optional<Campsite> optionalCampsite = campsiteService.getCampsiteByOwner(player.getUuid());
-                Campsite campsite = optionalCampsite
-                        .orElseGet(() -> {
-                            Campsite newCampsite = new Campsite(player.getUuid());
-                            campsiteService.addCampsite(newCampsite);
-                            return newCampsite;
-                        });
-
-                Vector3d spawnPoint = new Vector3d(0, 69, 0);
-                if(campsite.getPlots().isEmpty()) {
-                    Random random = new Random();
-                    PlotData campData = plotDataFabric.getPlotData(PlotType.CAMPSITE);
-                    PlotData carData = plotDataFabric.getPlotData(PlotType.CARAVAN);
-
-                    PlotData plotData = random.nextBoolean() ? campData : carData;
-                    for (int i = 0; i < 5; i++) {
-                        Vector3d offset = new Vector3d(spawnPoint);
-                        Plot plot = new Plot(plotData, offset.add(0,-1, i * (plotData.area().getSize().z + 5)));
-                        campsite.addPlot(plot);
-                    }
-                }
-
-                InstanceContainer instanceContainer = instanceService.getInstance(campsite);
-
-                event.setSpawningInstance(instanceContainer);
-                player.setRespawnPoint(PositionMapper.toMinestomPos(spawnPoint));
-            });
-
-            globalEventHandler.addListener(PlayerBlockBreakEvent.class, event -> {
-                event.setCancelled(true);
-            });
+            this.campsiteView = new CampsiteView(campsiteService, plotDataFabric, instanceService);
 
             MinecraftServer.getCommandManager().register(new ShutdownCommand());
             server.start(address);

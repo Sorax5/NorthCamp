@@ -32,4 +32,8 @@ public class Campsite {
     public void addPlot(Plot plot) {
         this.plots.add(plot);
     }
+
+    public void addClient(Client client) {
+        this.clients.add(client);
+    }
 }

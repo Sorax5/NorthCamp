@@ -1,5 +1,6 @@
 package fr.phylisiumstudio.logic.builder;
 
+import fr.phylisiumstudio.app.App;
 import fr.phylisiumstudio.logic.area.Area;
 import fr.phylisiumstudio.logic.area.AreaBlockIterator;
 import fr.phylisiumstudio.logic.mapper.PositionMapper;
@@ -61,6 +62,7 @@ public class PlotBuilder extends MinestomBuilder<PlotData, Plot> {
             return future;
         }
         catch (Exception e) {
+            System.err.println("Failed to build plot: " + e.getMessage());
             future.completeExceptionally(e);
             return future;
         }

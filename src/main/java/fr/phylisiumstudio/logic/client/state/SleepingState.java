@@ -7,7 +7,6 @@ import fr.phylisiumstudio.logic.state.Timer;
 import java.time.Duration;
 
 public class SleepingState extends ClientState {
-
     private Timer timer;
 
     public SleepingState(ClientStateMachine stateMachine) {
@@ -21,8 +20,9 @@ public class SleepingState extends ClientState {
 
     @Override
     public void onEnter(Client owner) {
+        System.out.println("Entering Sleeping State");
         timer = Timer.builder()
-                .duration(Duration.ofSeconds(20))
+                .duration(Duration.ofSeconds(2))
                 .callback(() -> { getStateMachine().HandleTransition(ClientStateMachine.ClientTransition.TO_PLAYING.name()); })
                 .build();
 
@@ -31,7 +31,6 @@ public class SleepingState extends ClientState {
 
     @Override
     public void onExit(Client owner) {
-
     }
 
     @Override

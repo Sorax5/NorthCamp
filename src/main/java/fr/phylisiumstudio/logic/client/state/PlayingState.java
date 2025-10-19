@@ -23,19 +23,19 @@ public class PlayingState extends ClientState {
 
     @Override
     public void onEnter(Client owner) {
+        System.out.println("Entering Playing State");
         this.timer = Timer.builder()
-                .duration(Duration.ofSeconds(20))
+                .duration(Duration.ofSeconds(2))
                 .callback(() -> { getStateMachine().HandleTransition(ClientStateMachine.ClientTransition.TO_SLEEPING.name()); })
                 .build();
     }
 
     @Override
     public void onExit(Client owner) {
-
     }
 
     @Override
     public void update(Client owner, float deltaTime) {
-
+        timer.Update();
     }
 }
