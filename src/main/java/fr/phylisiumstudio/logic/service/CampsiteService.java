@@ -1,14 +1,14 @@
 package fr.phylisiumstudio.logic.service;
 
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import fr.phylisiumstudio.logic.Campsite;
-import fr.phylisiumstudio.logic.client.Client;
-import fr.phylisiumstudio.logic.plot.Plot;
 import fr.phylisiumstudio.logic.repository.ICampsiteRepository;
 import lombok.Getter;
 
 import java.util.*;
 
+@Singleton
 public class CampsiteService {
     @Getter
     private final ICampsiteRepository campsiteRepository;

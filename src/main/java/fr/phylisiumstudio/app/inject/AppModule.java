@@ -1,5 +1,5 @@
 package fr.phylisiumstudio.app.inject;
-import com.google.gson.GsonBuilder;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.*;
 import fr.phylisiumstudio.app.App;
 import fr.phylisiumstudio.app.config.MainConfig;
@@ -32,7 +32,7 @@ public class AppModule extends AbstractModule {
         bind(InstanceManager.class).toInstance(app.getInstanceManager());
         bind(App.class).toInstance(app);
         bind(MainConfig.class).toInstance(app.getMainConfig());
-        bind(GsonBuilder.class).toInstance(app.getGsonBuilder());
+        bind(ObjectMapper.class).toInstance(app.getObjectMapper());
     }
 
     public Injector getInjector() {

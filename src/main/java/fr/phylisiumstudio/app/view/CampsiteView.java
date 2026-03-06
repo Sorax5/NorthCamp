@@ -1,28 +1,24 @@
 package fr.phylisiumstudio.app.view;
 
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
 import fr.phylisiumstudio.logic.Campsite;
+import fr.phylisiumstudio.logic.activity.Activity;
+import fr.phylisiumstudio.logic.activity.ActivityType;
+import fr.phylisiumstudio.logic.activity.fabric.ActivityDataFabric;
 import fr.phylisiumstudio.logic.client.Client;
 import fr.phylisiumstudio.logic.mapper.PositionMapper;
 import fr.phylisiumstudio.logic.plot.Plot;
-import fr.phylisiumstudio.logic.plot.PlotData;
 import fr.phylisiumstudio.logic.plot.PlotType;
 import fr.phylisiumstudio.logic.plot.fabric.PlotDataFabric;
 import fr.phylisiumstudio.logic.service.CampsiteService;
 import fr.phylisiumstudio.logic.service.InstanceService;
 import net.minestom.server.MinecraftServer;
-import net.minestom.server.entity.Player;
 import net.minestom.server.event.GlobalEventHandler;
 import net.minestom.server.event.instance.InstanceTickEvent;
 import net.minestom.server.event.player.AsyncPlayerConfigurationEvent;
-import net.minestom.server.event.player.PlayerSpawnEvent;
-import net.minestom.server.instance.InstanceContainer;
 import org.joml.Vector3d;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.Random;
 
 public class CampsiteView {
@@ -30,14 +26,17 @@ public class CampsiteView {
     private final CampsiteService campsiteService;
     private final PlotDataFabric plotDataFabric;
     private final InstanceService instanceService;
+    private final ActivityDataFabric activityDataFabric;
 
     public CampsiteView(CampsiteService campsiteService,
                         PlotDataFabric plotDataFabric,
-                        InstanceService instanceService) {
+                        InstanceService instanceService,
+                        ActivityDataFabric activityDataFabric) {
         this.clientsStateViews = new ArrayList<>();
         this.campsiteService = campsiteService;
         this.plotDataFabric = plotDataFabric;
         this.instanceService = instanceService;
+        this.activityDataFabric = activityDataFabric;
 
         GlobalEventHandler eventHandler = MinecraftServer.getGlobalEventHandler();
 
@@ -46,47 +45,74 @@ public class CampsiteView {
     }
 
     public void AddCamping(AsyncPlayerConfigurationEvent event) {
-        final Player player = event.getPlayer();
+        final var player = event.getPlayer();
 
-        Optional<Campsite> optionalCampsite = campsiteService.getCampsiteByOwner(player.getUuid());
-        Campsite campsite = optionalCampsite
+        var campsite = campsiteService.getCampsiteByOwner(player.getUuid())
                 .orElseGet(() -> {
-                    Campsite newCampsite = new Campsite(player.getUuid());
+                    var newCampsite = new Campsite(player.getUuid());
                     campsiteService.addCampsite(newCampsite);
                     return newCampsite;
                 });
 
-        Vector3d spawnPoint = new Vector3d(0, 69, 0);
-        /*if(campsite.getPlots().isEmpty()) {
-            Random random = new Random();
-            PlotData campData = plotDataFabric.getPlotData(PlotType.CAMPSITE);
-            PlotData carData = plotDataFabric.getPlotData(PlotType.CARAVAN);
+        var spawnPoint = new Vector3d(0, 69, 0);
+        if(campsite.getPlots().isEmpty()) {
+            var random = new Random();
+            var campData = plotDataFabric.getPlotData(PlotType.CAMPSITE);
+            var carData = plotDataFabric.getPlotData(PlotType.CARAVAN);
 
-            PlotData plotData = random.nextBoolean() ? campData : carData;
-            for (int i = 0; i < 5; i++) {
-                Vector3d offset = new Vector3d(spawnPoint);
-                Plot plot = new Plot(plotData, offset.add(0,-1, i * (plotData.area().getSize().z + 5)));
+            for (var i = 0; i < 20; i++) {
+                var plotData = random.nextBoolean() ? campData : carData;
+
+                var row = i / 5;
+                var col = i % 5;
+                var xOffset = col * 20;
+                var zOffset = row * (plotData.area().getSize().z + 5);
+
+                var offset = new Vector3d(spawnPoint);
+                var plot = new Plot(plotData, offset.add(xOffset, 0, zOffset));
                 campsite.addPlot(plot);
-            }
-        }*/
 
-        if(campsite.getClients().isEmpty()) {
-            campsite.addClient(new Client());
+                var client = new Client(plot);
+                campsite.addClient(client);
+            }
         }
 
-        InstanceContainer instanceContainer = instanceService.getInstance(campsite);
+        var activitySpawnPoint = new Vector3d(0, 69, -20);
+        if (campsite.getActivities().isEmpty()) {
+            var activityTypes = ActivityType.values();
+
+            for (var i = 0; i < activityTypes.length; i++) {
+                var activityType = activityTypes[i];
+                var activityData = activityDataFabric.getActivityData(activityType);
+
+                if (activityData == null) {
+                    continue;
+                }
+
+                var row = i / 5;
+                var col = i % 5;
+                var xOffset = col * 20;
+                var zOffset = row * (activityData.area().getSize().z + 5);
+
+                var offset = new Vector3d(activitySpawnPoint).add(xOffset, 0, zOffset);
+                var activity = new Activity(activityData, offset, 15, 5, 2);
+                campsite.addActivity(activity);
+            }
+        }
+
+        var instanceContainer = instanceService.getInstance(campsite);
 
         event.setSpawningInstance(instanceContainer);
         player.setRespawnPoint(PositionMapper.toMinestomPos(spawnPoint));
 
-        this.clientsStateViews.add(new ClientStateView(campsite));
+        this.clientsStateViews.add(new ClientStateView(campsite, instanceContainer));
     }
 
     public void Update(InstanceTickEvent event) {
-        float deltaTime = event.getDuration() / 1000f;
+        var deltaTime = event.getDuration() / 1000f;
 
-        for (ClientStateView clientsStateView : clientsStateViews) {
-            boolean isLinked = instanceService.IsLinked(
+        for (var clientsStateView : clientsStateViews) {
+            var isLinked = instanceService.IsLinked(
                     clientsStateView.getCampsite(),
                     event.getInstance()
             );

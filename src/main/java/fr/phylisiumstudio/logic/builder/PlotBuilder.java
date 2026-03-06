@@ -9,11 +9,9 @@ import fr.phylisiumstudio.logic.plot.Plot;
 import fr.phylisiumstudio.logic.plot.PlotData;
 import fr.phylisiumstudio.logic.plot.PlotType;
 import fr.phylisiumstudio.logic.schematic.SchematicFactory;
-import net.hollowcube.schem.Rotation;
-import net.hollowcube.schem.Schematic;
+import net.hollowcube.schem.util.Rotation;
 import net.minestom.server.coordinate.Pos;
 import net.minestom.server.instance.InstanceContainer;
-import net.minestom.server.instance.batch.RelativeBlockBatch;
 import net.minestom.server.instance.block.Block;
 import org.joml.Vector3d;
 import org.joml.Vector3i;
@@ -37,23 +35,24 @@ public class PlotBuilder extends MinestomBuilder<PlotData, Plot> {
     public CompletableFuture<Void> BuildAsync(PlotData data, Plot state, InstanceContainer instance) {
         CompletableFuture<Void> future = new CompletableFuture<>();
         try {
-            String schematicName = schematicMap.get(data.type());
-            Schematic schematic = schematicFactory.getSchematic(schematicName);
+            var schematicName = schematicMap.get(data.type());
+            var schematic = schematicFactory.getSchematic(schematicName);
 
-            RelativeBlockBatch batch = schematic.build(Rotation.NONE, true);
-            batch.apply(instance, PositionMapper.toMinestomPos(state.getPosition()), () -> {
+            var batch = schematic.createBatch(Rotation.NONE);
+
+            batch.apply(instance, PositionMapper.toMinestomPos(state.getPosition()), blockBatch -> {
                 Area area = data.area();
 
-                AreaBlockIterator areaBlockIterator = new AreaBlockIterator(area);
+                var areaBlockIterator = new AreaBlockIterator(area);
                 while (areaBlockIterator.hasNext()) {
-                    Vector3i vector3i = areaBlockIterator.next();
+                    var vector3i = areaBlockIterator.next();
                     if (!area.isGroundBlock(vector3i) || !area.isWallBlock(vector3i)) {
                         continue;
                     }
 
-                    Vector3d wordPosition = VectorMapper.toVector3d(vector3i).add(state.getPosition());
-                    Pos blockPos = PositionMapper.toMinestomPos(wordPosition);
-                    instance.setBlock(blockPos, Block.WHITE_WOOL);
+                    var wordPosition = VectorMapper.toVector3d(vector3i).add(state.getPosition());
+                    var blockPos = PositionMapper.toMinestomPos(wordPosition);
+                    blockBatch.setBlock(blockPos, Block.WHITE_WOOL);
                 }
 
                 future.complete(null);

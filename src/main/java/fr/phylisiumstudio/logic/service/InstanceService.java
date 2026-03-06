@@ -38,26 +38,26 @@ public class InstanceService {
 
     public InstanceContainer getInstance(Campsite campsite) {
         try {
-            InstanceContainer instanceContainer = instances.get(campsite.getUniqueID());
+            var instanceContainer = instances.get(campsite.getUniqueID());
             if (instanceContainer == null) {
                 instanceContainer = instanceManager.createInstanceContainer();
                 instanceContainer.setChunkLoader(new AnvilLoader(this.instanceFolder.getAbsolutePath()));
                 instances.put(campsite.getUniqueID(), instanceContainer);
 
                 List<CompletableFuture<Chunk>> futures = new ArrayList<>();
-                for (int x = 0; x < 15; x++) {
-                    for (int z = 0; z < 15; z++) {
+                for (var x = 0; x < 25; x++) {
+                    for (var z = 0; z < 25; z++) {
                         futures.add(instanceContainer.loadChunk(x, z));
                     }
                 }
 
-                Instant now = Instant.now();
+                var now = Instant.now();
                 CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-                Instant after = Instant.now();
-                Duration duration = Duration.between(now, after);
+                var after = Instant.now();
+                var duration = Duration.between(now, after);
                 app.getLogger().info("Loaded " + futures.size() + " chunks in " + duration.toMillis() + " ms for instance " + campsite.getUniqueID());
 
-                CompletableFuture<Void> future = builderService.BuildCampsiteAsync(campsite, instanceContainer);
+                var future = builderService.BuildCampsiteAsync(campsite, instanceContainer);
                 future.join();
             }
 

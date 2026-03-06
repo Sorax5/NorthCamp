@@ -1,21 +1,16 @@
 package fr.phylisiumstudio.storage;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import com.fasterxml.jackson.databind.InjectableValues;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import fr.phylisiumstudio.app.inject.annotation.CampsiteRepositoryFile;
 import fr.phylisiumstudio.logic.Campsite;
-import fr.phylisiumstudio.logic.activity.Activity;
 import fr.phylisiumstudio.logic.activity.fabric.ActivityDataFabric;
-import fr.phylisiumstudio.logic.plot.Plot;
 import fr.phylisiumstudio.logic.plot.fabric.PlotDataFabric;
 import fr.phylisiumstudio.logic.repository.ICampsiteRepository;
-import fr.phylisiumstudio.storage.serialize.ActivitySerializer;
-import fr.phylisiumstudio.storage.serialize.PlotSerializer;
 
 import java.io.File;
-import java.nio.file.Files;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -27,22 +22,26 @@ import java.util.stream.Stream;
 @Singleton
 public class JsonCampsiteRepository implements ICampsiteRepository {
     private final File folder;
-    private final Gson gson;
+    private final ObjectMapper objectMapper;
     private final Logger logger;
 
     @Inject
-    public JsonCampsiteRepository(@CampsiteRepositoryFile File folder, Logger logger, GsonBuilder gsonBuilder, PlotSerializer plotSerializer, ActivitySerializer activitySerializer)
+    public JsonCampsiteRepository(@CampsiteRepositoryFile File folder, Logger logger, ObjectMapper objectMapper, ActivityDataFabric activityDataFabric, PlotDataFabric plotDataFabric)
     {
         this.logger = logger;
         this.folder = folder;
+        this.objectMapper = objectMapper.copy();
+
+        InjectableValues.Std injectableValues = new InjectableValues.Std();
+        injectableValues.addValue(ActivityDataFabric.class, activityDataFabric);
+        injectableValues.addValue(ActivityDataFabric.class.getName(), activityDataFabric);
+        injectableValues.addValue(PlotDataFabric.class, plotDataFabric);
+        injectableValues.addValue(PlotDataFabric.class.getName(), plotDataFabric);
+        this.objectMapper.setInjectableValues(injectableValues);
+
         if (!this.folder.exists() && !this.folder.mkdirs()) {
             this.logger.log(Level.WARNING, "Unable to create campsite folder.");
         }
-
-        gsonBuilder.registerTypeAdapter(Plot.class, plotSerializer);
-        gsonBuilder.registerTypeAdapter(Activity.class, activitySerializer);
-
-        this.gson = gsonBuilder.create();
     }
 
     @Override
@@ -55,8 +54,7 @@ public class JsonCampsiteRepository implements ICampsiteRepository {
                 }
 
                 if (file.createNewFile()) {
-                    String json = gson.toJson(entity);
-                    Files.writeString(file.toPath(), json);
+                    objectMapper.writeValue(file, entity);
                     return entity;
                 } else {
                     throw new RuntimeException("Failed to create file for campsite with ID " + entity.getUniqueID());
@@ -77,8 +75,7 @@ public class JsonCampsiteRepository implements ICampsiteRepository {
                     return null;
                 }
 
-                String json = Files.readString(file.toPath());
-                return gson.fromJson(json, Campsite.class);
+                return objectMapper.readValue(file, Campsite.class);
             } catch (Exception e) {
                 logger.log(Level.SEVERE, "Error reading campsite: " + e.getMessage(), e);
                 throw new RuntimeException(e);
@@ -95,8 +92,7 @@ public class JsonCampsiteRepository implements ICampsiteRepository {
                     throw new IllegalArgumentException("Campsite with ID " + entity.getUniqueID() + " does not exist.");
                 }
 
-                String json = gson.toJson(entity);
-                Files.writeString(file.toPath(), json);
+                objectMapper.writeValue(file, entity);
                 return entity;
             } catch (Exception e) {
                 logger.log(Level.SEVERE, "Error updating campsite: " + e.getMessage(), e);
@@ -131,8 +127,7 @@ public class JsonCampsiteRepository implements ICampsiteRepository {
 
                 return Stream.of(files).map(file -> {
                     try {
-                        String json = Files.readString(file.toPath());
-                        return gson.fromJson(json, Campsite.class);
+                        return objectMapper.readValue(file, Campsite.class);
                     } catch (Exception e) {
                         logger.log(Level.SEVERE, "Error reading campsite file: " + e.getMessage(), e);
                         return null;
@@ -140,6 +135,19 @@ public class JsonCampsiteRepository implements ICampsiteRepository {
                 }).filter(Objects::nonNull).toList();
             } catch (Exception e) {
                 logger.log(Level.SEVERE, "Error listing campsites: " + e.getMessage(), e);
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<Boolean> exists(UUID uuid) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                File file = getFile(uuid);
+                return file.exists();
+            } catch (Exception e) {
+                logger.log(Level.SEVERE, "Error checking campsite existence: " + e.getMessage(), e);
                 throw new RuntimeException(e);
             }
         });

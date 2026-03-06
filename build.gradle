@@ -9,17 +9,20 @@ version = '1.0-SNAPSHOT'
 repositories {
     mavenCentral()
     maven { url 'https://jitpack.io' }
+    maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
+    maven { url "https://oss.sonatype.org/content/repositories/releases/" }
 }
 
 dependencies {
-    implementation 'net.minestom:minestom:2025.09.13-1.21.8'
+    implementation 'net.minestom:minestom:2026.03.03-1.21.11'
     implementation 'com.github.Sorax5:Maestro:-SNAPSHOT'
-    implementation 'com.google.code.gson:gson:2.13.2'
     implementation 'ch.qos.logback:logback-classic:1.5.18'
     implementation 'org.spongepowered:configurate-yaml:4.2.0'
     implementation 'com.google.inject:guice:7.0.0'
     implementation group: 'org.joml', name: 'joml', version: '1.10.8'
-    implementation 'dev.hollowcube:schem:1.3.1'
+    implementation 'dev.hollowcube:schem:2.0.1'
+
+    implementation "com.badlogicgames.gdx:gdx-ai:1.8.2"
 
     compileOnly("org.projectlombok:lombok:1.18.42")
     annotationProcessor("org.projectlombok:lombok:1.18.42")
@@ -30,6 +33,8 @@ dependencies {
     testImplementation platform('org.junit:junit-bom:5.10.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.2'
 }
 
 test {
@@ -38,7 +43,7 @@ test {
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(21)) // Minestom has a minimum Java version of 21
+        languageVersion.set(JavaLanguageVersion.of(25)) // Minestom has a minimum Java version of 21
     }
 }
 

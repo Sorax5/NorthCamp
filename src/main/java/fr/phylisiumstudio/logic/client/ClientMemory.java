@@ -1,0 +1,19 @@
+package fr.phylisiumstudio.logic.client;
+
+import fr.phylisiumstudio.logic.Campsite;
+import fr.phylisiumstudio.logic.activity.Activity;
+import lombok.Data;
+import net.minestom.server.coordinate.Pos;
+import net.minestom.server.instance.InstanceContainer;
+
+@Data
+public class ClientMemory {
+    public final InstanceContainer instance;
+    public final Client client;
+    public final Campsite campsite;
+    public Pos targetPosition;
+    public ClientEntity playerEntity;
+
+    public Activity choosenActivity;
+    public Activity currentActivity;
+}

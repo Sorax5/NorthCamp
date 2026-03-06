@@ -1,24 +1,38 @@
 package fr.phylisiumstudio.logic.client;
 
-import lombok.Getter;
-import lombok.Setter;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import fr.phylisiumstudio.logic.plot.Plot;
+import lombok.Data;
 
 import java.util.UUID;
 
+@Data
 public class Client {
-    @Getter
     private final UUID uniqueID;
+    private ClientState action;
+    private final Plot plot;
 
-    @Getter
-    @Setter
-    private ClientAction action;
-
-    public Client() {
+    public Client(Plot plot) {
         this.uniqueID = UUID.randomUUID();
+        this.action = ClientState.SLEEPY;
+        this.plot = plot;
     }
 
-    public enum ClientAction {
-        SLEEPING,
-        PLAYING
+    @JsonCreator
+    public Client(
+            @JsonProperty("uniqueID") UUID uniqueID,
+            @JsonProperty("action") ClientState action,
+            @JsonProperty("plot") Plot plot
+    ) {
+        this.uniqueID = uniqueID;
+        this.action = action;
+        this.plot = plot;
+    }
+
+    public enum ClientState {
+        SLEEPY,
+        BORED,
+        CHILL
     }
 }
