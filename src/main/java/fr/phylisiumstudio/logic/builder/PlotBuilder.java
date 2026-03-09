@@ -1,31 +1,19 @@
 package fr.phylisiumstudio.logic.builder;
 
-import fr.phylisiumstudio.app.App;
-import fr.phylisiumstudio.logic.area.Area;
 import fr.phylisiumstudio.logic.area.AreaBlockIterator;
 import fr.phylisiumstudio.logic.mapper.PositionMapper;
 import fr.phylisiumstudio.logic.mapper.VectorMapper;
 import fr.phylisiumstudio.logic.plot.Plot;
 import fr.phylisiumstudio.logic.plot.PlotData;
-import fr.phylisiumstudio.logic.plot.PlotType;
 import fr.phylisiumstudio.logic.schematic.SchematicFactory;
 import net.hollowcube.schem.util.Rotation;
-import net.minestom.server.coordinate.Pos;
 import net.minestom.server.instance.InstanceContainer;
 import net.minestom.server.instance.block.Block;
-import org.joml.Vector3d;
-import org.joml.Vector3i;
 
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 public class PlotBuilder extends MinestomBuilder<PlotData, Plot> {
     private final SchematicFactory schematicFactory;
-
-    private final Map<PlotType, String> schematicMap = Map.of(
-            PlotType.CAMPSITE, "camp_1.schem",
-            PlotType.CARAVAN, "car.schem"
-    );
 
     public PlotBuilder(SchematicFactory schematicFactory) {
         this.schematicFactory = schematicFactory;
@@ -33,15 +21,14 @@ public class PlotBuilder extends MinestomBuilder<PlotData, Plot> {
 
     @Override
     public CompletableFuture<Void> BuildAsync(PlotData data, Plot state, InstanceContainer instance) {
-        CompletableFuture<Void> future = new CompletableFuture<>();
+        var future = new CompletableFuture<Void>();
         try {
-            var schematicName = schematicMap.get(data.type());
-            var schematic = schematicFactory.getSchematic(schematicName);
+            var schematic = schematicFactory.getSchematic(data.schem());
 
             var batch = schematic.createBatch(Rotation.NONE);
 
             batch.apply(instance, PositionMapper.toMinestomPos(state.getPosition()), blockBatch -> {
-                Area area = data.area();
+                var area = data.area();
 
                 var areaBlockIterator = new AreaBlockIterator(area);
                 while (areaBlockIterator.hasNext()) {

@@ -11,6 +11,7 @@ import fr.phylisiumstudio.app.commands.MoneyCommand;
 import fr.phylisiumstudio.app.commands.ShutdownCommand;
 import fr.phylisiumstudio.app.config.MainConfig;
 import fr.phylisiumstudio.app.inject.AppModule;
+import fr.phylisiumstudio.app.inject.GuiceHandlerInstantiator;
 import fr.phylisiumstudio.app.view.CampsiteView;
 import fr.phylisiumstudio.logic.IApplication;
 import fr.phylisiumstudio.logic.activity.ActivityData;
@@ -21,6 +22,7 @@ import fr.phylisiumstudio.logic.builder.ActivityBuilder;
 import fr.phylisiumstudio.logic.builder.PlotBuilder;
 import fr.phylisiumstudio.logic.builder.fabric.BuilderFabric;
 import fr.phylisiumstudio.logic.plot.PlotData;
+import fr.phylisiumstudio.logic.plot.PlotDataService;
 import fr.phylisiumstudio.logic.plot.PlotType;
 import fr.phylisiumstudio.logic.plot.fabric.PlotDataFabric;
 import fr.phylisiumstudio.logic.schematic.SchematicFactory;
@@ -28,10 +30,13 @@ import fr.phylisiumstudio.logic.service.BuilderService;
 import fr.phylisiumstudio.logic.service.CampsiteService;
 import fr.phylisiumstudio.logic.service.InstanceService;
 import lombok.Getter;
+import me.lucko.spark.minestom.SparkMinestom;
 import net.hollowcube.schem.reader.SchematicReader;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.instance.InstanceManager;
 import org.joml.Vector3d;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.spongepowered.configurate.yaml.NodeStyle;
 import org.spongepowered.configurate.yaml.YamlConfigurationLoader;
 
@@ -39,8 +44,6 @@ import java.io.File;
 import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 @Singleton
 @Getter
@@ -52,7 +55,7 @@ public class App implements IApplication {
     private InstanceManager instanceManager;
 
     private final File dataFolder = new File("run");
-    private final Logger logger;
+    private static final Logger logger = LoggerFactory.getLogger(App.class);
     private MainConfig mainConfig;
 
     @Inject
@@ -69,20 +72,23 @@ public class App implements IApplication {
     private BuilderService builderService;
     @Inject
     private SchematicFactory schematicFactory;
+    @Inject
+    private PlotDataService plotDataService;
 
     @Inject
     private MoneyCommand moneyCommand;
 
+    @Inject
     private CampsiteView campsiteView;
+    private SparkMinestom spark;
 
     public App() {
         objectMapper = new ObjectMapper()
                 .enable(SerializationFeature.INDENT_OUTPUT)
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        logger = Logger.getLogger("CampsiteApp");
 
         if (!dataFolder.exists() && !dataFolder.mkdirs()) {
-            logger.warning("Could not create data folder");
+            logger.warn("Could not create data folder");
         }
     }
 
@@ -100,10 +106,20 @@ public class App implements IApplication {
     public void OnDisable() {
         try {
             logger.info("Saving data...");
+
+            if (instanceService != null) {
+                instanceService.shutdown();
+            }
+
             campsiteService.saveCampsite();
+
+            if (spark != null) {
+                spark.shutdown();
+                logger.info("Spark profiler disabled.");
+            }
         }
         catch (Exception e) {
-            logger.log(Level.WARNING, "Error saving data", e);
+            logger.warn("Error saving data", e);
         }
         finally {
             logger.info("Data saved.");
@@ -131,14 +147,20 @@ public class App implements IApplication {
             }
         }
         catch (Exception e) {
-            logger.log(Level.WARNING, "Error loading schematics", e);
+            logger.warn("Error loading schematics", e);
         }
     }
 
     public void SetupGuice() {
         try {
+            GuiceHandlerInstantiator handlerInstantiator = new GuiceHandlerInstantiator();
+            objectMapper.setHandlerInstantiator(handlerInstantiator);
+
             this.appModule = new AppModule(this);
-            appModule.getInjector().injectMembers(this);
+            var injector = appModule.getInjector();
+
+            handlerInstantiator.setInjector(injector);
+            injector.injectMembers(this);
 
             SimpleModule module = new SimpleModule();
             objectMapper.registerModule(module);
@@ -148,7 +170,7 @@ public class App implements IApplication {
             objectMapper.setInjectableValues(injectableValues);
         }
         catch (Exception e) {
-            logger.log(Level.WARNING, "Error setting up Guice", e);
+            logger.warn("Error setting up Guice", e);
         }
     }
 
@@ -158,7 +180,7 @@ public class App implements IApplication {
             this.instanceManager = MinecraftServer.getInstanceManager();
         }
         catch (Exception e) {
-            logger.log(Level.WARNING, "Error setting up server", e);
+            logger.warn("Error setting up server", e);
         }
     }
 
@@ -188,23 +210,20 @@ public class App implements IApplication {
 
             this.mainConfig = mainConfig;
         } catch (Exception e) {
-            getLogger().log(Level.SEVERE, "Failed to load config", e);
+            logger.error("Failed to load config", e);
         }
     }
 
     public void LoadData() {
         logger.info("Loading data...");
         try {
+            plotDataService.load();
+
             var defaultArea = new Area(new Vector3d(0,0,0), new Vector3d(8,6,8));
 
             for (var value : ActivityType.values()) {
                 var activityData = new ActivityData(value, defaultArea);
                 activityDataFabric.registerActivityData(activityData.type(), activityData);
-            }
-
-            for (var value : PlotType.values()) {
-                var plotData = new PlotData(value, defaultArea);
-                plotDataFabric.registerPlotData(plotData.type(), plotData);
             }
 
             builderFabric.register("plot", () -> new PlotBuilder(schematicFactory));
@@ -213,7 +232,7 @@ public class App implements IApplication {
             campsiteService.loadCampsites();
         }
         catch (Exception e) {
-            logger.log(Level.WARNING, "Error loading data", e);
+            logger.warn("Error loading data", e);
         }
         finally {
             logger.info("Data loaded.");
@@ -224,15 +243,22 @@ public class App implements IApplication {
         try {
             var address = new InetSocketAddress(mainConfig.Host, mainConfig.Port);
 
-            this.campsiteView = new CampsiteView(campsiteService, plotDataFabric, instanceService, activityDataFabric);
-
             MinecraftServer.getCommandManager().register(new ShutdownCommand());
             MinecraftServer.getCommandManager().register(moneyCommand);
+
+            // Initialize Spark profiler
+            Path sparkDirectory = Path.of(dataFolder.getPath(), "spark");
+            this.spark = SparkMinestom.builder(sparkDirectory)
+                    .commands(true)
+                    .permissionHandler((sender, permission) -> true)
+                    .enable();
+            logger.info("Spark profiler enabled.");
+
             server.start(address);
             logger.info("Server started on " + address);
         }
         catch (Exception e) {
-            logger.log(Level.WARNING, "Error starting server", e);
+            logger.warn("Error starting server", e);
         }
     }
 }

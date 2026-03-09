@@ -1,0 +1,18 @@
+{
+  "type" : "CARAVAN",
+  "area" : {
+    "firstCorner" : {
+      "x" : 0.0,
+      "y" : 0.0,
+      "z" : 0.0,
+      "finite" : true
+    },
+    "secondCorner" : {
+      "x" : 8.0,
+      "y" : 6.0,
+      "z" : 8.0,
+      "finite" : true
+    }
+  },
+  "schem" : "car.nbt"
+}

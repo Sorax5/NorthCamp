@@ -9,68 +9,122 @@ import net.minestom.server.instance.Instance;
 import net.minestom.server.instance.InstanceContainer;
 import net.minestom.server.instance.InstanceManager;
 import net.minestom.server.instance.anvil.AnvilLoader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Singleton
 public class InstanceService {
-    private final InstanceManager instanceManager;
-    private final App app;
-    private final BuilderService builderService;
-    private Map<UUID, InstanceContainer> instances = new HashMap<>();
+    private static final Logger logger = LoggerFactory.getLogger(InstanceService.class);
 
-    private File instanceFolder;
+    private final InstanceManager instanceManager;
+    private final BuilderService builderService;
+    private final int chunkRadius;
+
+    private final ConcurrentHashMap<UUID, CompletableFuture<InstanceContainer>> instances = new ConcurrentHashMap<>();
+
+    private final File templateFolder;
 
     @Inject
     public InstanceService(InstanceManager instanceManager, App app, BuilderService builderService) {
         this.builderService = builderService;
         this.instanceManager = instanceManager;
-        this.app = app;
-        this.instanceFolder = new File(app.getDataFolder(), "instance");
-        if (!instanceFolder.exists() && !instanceFolder.mkdirs()) {
-            app.getLogger().warning("Failed to create instance folder: " + instanceFolder.getAbsolutePath());
+        this.templateFolder = new File(app.getDataFolder(), "instance");
+
+        var config = app.getMainConfig();
+        this.chunkRadius = (config != null) ? config.ChunkRadius : 13;
+
+        if (!templateFolder.exists() && !templateFolder.mkdirs()) {
+            logger.warn("Failed to create template folder: {}", templateFolder.getAbsolutePath());
         }
     }
 
-    public InstanceContainer getInstance(Campsite campsite) {
-        try {
-            var instanceContainer = instances.get(campsite.getUniqueID());
-            if (instanceContainer == null) {
-                instanceContainer = instanceManager.createInstanceContainer();
-                instanceContainer.setChunkLoader(new AnvilLoader(this.instanceFolder.getAbsolutePath()));
-                instances.put(campsite.getUniqueID(), instanceContainer);
+    public CompletableFuture<InstanceContainer> getInstanceAsync(Campsite campsite) {
+        return instances.computeIfAbsent(campsite.getUniqueID(), _ -> createInstanceAsync(campsite));
+    }
 
-                List<CompletableFuture<Chunk>> futures = new ArrayList<>();
-                for (var x = 0; x < 25; x++) {
-                    for (var z = 0; z < 25; z++) {
+    public InstanceContainer getInstance(Campsite campsite) {
+        return getInstanceAsync(campsite).join();
+    }
+
+    private CompletableFuture<InstanceContainer> createInstanceAsync(Campsite campsite) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                var instanceContainer = instanceManager.createInstanceContainer();
+                // Chargement depuis le world template partagé (lecture seule)
+                var loader = new AnvilLoader(templateFolder.toPath());
+                instanceContainer.setChunkLoader(loader);
+
+                var now = Instant.now();
+
+                var futures = new ArrayList<CompletableFuture<Chunk>>();
+                var halfRadius = chunkRadius / 2;
+                for (var x = -halfRadius; x <= halfRadius; x++) {
+                    for (var z = -halfRadius; z <= halfRadius; z++) {
                         futures.add(instanceContainer.loadChunk(x, z));
                     }
                 }
 
-                var now = Instant.now();
                 CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-                var after = Instant.now();
-                var duration = Duration.between(now, after);
-                app.getLogger().info("Loaded " + futures.size() + " chunks in " + duration.toMillis() + " ms for instance " + campsite.getUniqueID());
 
-                var future = builderService.BuildCampsiteAsync(campsite, instanceContainer);
-                future.join();
+                var duration = Duration.between(now, Instant.now());
+                logger.info("Loaded {} chunks in {} ms for campsite {}", futures.size(), duration.toMillis(), campsite.getUniqueID());
+
+                builderService.BuildCampsiteAsync(campsite, instanceContainer).join();
+
+                logger.info("Instance ready for campsite {}", campsite.getUniqueID());
+                return instanceContainer;
+            } catch (Exception e) {
+                instances.remove(campsite.getUniqueID());
+                logger.error("Failed to create instance for campsite {}: {}", campsite.getUniqueID(), e.getMessage(), e);
+                throw new RuntimeException(e);
             }
-
-            return instanceContainer;
-        }
-        catch (Exception e) {
-            app.getLogger().severe("Failed to get or create instance for campsite " + campsite.getUniqueID() + ": " + e.getMessage());
-            throw new RuntimeException(e);
-        }
+        });
     }
 
-    public boolean IsLinked(Campsite campsite, Instance instance) {
-        InstanceContainer linkedInstance = instances.get(campsite.getUniqueID());
-        return linkedInstance != null && linkedInstance.getUuid().equals(instance.getUuid());
+    public boolean isLinked(Campsite campsite, Instance instance) {
+        var future = instances.get(campsite.getUniqueID());
+        if (future == null || !future.isDone()) {
+            return false;
+        }
+        var linkedInstance = future.join();
+        return linkedInstance.getUuid().equals(instance.getUuid());
+    }
+
+    public void releaseInstance(Campsite campsite) {
+        var future = instances.remove(campsite.getUniqueID());
+        if (future == null || !future.isDone()) {
+            return;
+        }
+        var container = future.join();
+        instanceManager.unregisterInstance(container);
+        logger.info("Released ephemeral instance for campsite {}", campsite.getUniqueID());
+    }
+
+    public void shutdown() {
+        logger.info("Shutting down InstanceService: releasing {} ephemeral instances...", instances.size());
+
+        for (var entry : instances.entrySet()) {
+            var future = entry.getValue();
+            if (!future.isDone() || future.isCompletedExceptionally()) {
+                continue;
+            }
+            try {
+                var container = future.join();
+                instanceManager.unregisterInstance(container);
+                logger.info("Released instance for campsite {}", entry.getKey());
+            } catch (Exception e) {
+                logger.error("Error releasing instance for campsite {}: {}", entry.getKey(), e.getMessage(), e);
+            }
+        }
+
+        instances.clear();
+        logger.info("InstanceService shutdown complete.");
     }
 }

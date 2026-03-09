@@ -9,26 +9,25 @@ import fr.phylisiumstudio.logic.Campsite;
 import fr.phylisiumstudio.logic.activity.fabric.ActivityDataFabric;
 import fr.phylisiumstudio.logic.plot.fabric.PlotDataFabric;
 import fr.phylisiumstudio.logic.repository.ICampsiteRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.stream.Stream;
 
 @Singleton
 public class JsonCampsiteRepository implements ICampsiteRepository {
+    private static final Logger logger = LoggerFactory.getLogger(JsonCampsiteRepository.class);
     private final File folder;
     private final ObjectMapper objectMapper;
-    private final Logger logger;
 
     @Inject
-    public JsonCampsiteRepository(@CampsiteRepositoryFile File folder, Logger logger, ObjectMapper objectMapper, ActivityDataFabric activityDataFabric, PlotDataFabric plotDataFabric)
+    public JsonCampsiteRepository(@CampsiteRepositoryFile File folder, ObjectMapper objectMapper, ActivityDataFabric activityDataFabric, PlotDataFabric plotDataFabric)
     {
-        this.logger = logger;
         this.folder = folder;
         this.objectMapper = objectMapper.copy();
 
@@ -40,7 +39,7 @@ public class JsonCampsiteRepository implements ICampsiteRepository {
         this.objectMapper.setInjectableValues(injectableValues);
 
         if (!this.folder.exists() && !this.folder.mkdirs()) {
-            this.logger.log(Level.WARNING, "Unable to create campsite folder.");
+            logger.warn("Unable to create campsite folder.");
         }
     }
 
@@ -60,7 +59,7 @@ public class JsonCampsiteRepository implements ICampsiteRepository {
                     throw new RuntimeException("Failed to create file for campsite with ID " + entity.getUniqueID());
                 }
             } catch (Exception e) {
-                logger.log(Level.SEVERE, "Error creating campsite: " + e.getMessage(), e);
+                logger.error("Error creating campsite: {}", e.getMessage(), e);
                 throw new RuntimeException(e);
             }
         });
@@ -77,7 +76,7 @@ public class JsonCampsiteRepository implements ICampsiteRepository {
 
                 return objectMapper.readValue(file, Campsite.class);
             } catch (Exception e) {
-                logger.log(Level.SEVERE, "Error reading campsite: " + e.getMessage(), e);
+                logger.error("Error reading campsite: {}", e.getMessage(), e);
                 throw new RuntimeException(e);
             }
         });
@@ -95,7 +94,7 @@ public class JsonCampsiteRepository implements ICampsiteRepository {
                 objectMapper.writeValue(file, entity);
                 return entity;
             } catch (Exception e) {
-                logger.log(Level.SEVERE, "Error updating campsite: " + e.getMessage(), e);
+                logger.error("Error updating campsite: {}", e.getMessage(), e);
                 throw new RuntimeException(e);
             }
         });
@@ -110,7 +109,7 @@ public class JsonCampsiteRepository implements ICampsiteRepository {
                     throw new RuntimeException("Failed to delete campsite with ID " + id);
                 }
             } catch (Exception e) {
-                logger.log(Level.SEVERE, "Error deleting campsite: " + e.getMessage(), e);
+                logger.error("Error deleting campsite: {}", e.getMessage(), e);
                 throw new RuntimeException(e);
             }
         });
@@ -129,12 +128,12 @@ public class JsonCampsiteRepository implements ICampsiteRepository {
                     try {
                         return objectMapper.readValue(file, Campsite.class);
                     } catch (Exception e) {
-                        logger.log(Level.SEVERE, "Error reading campsite file: " + e.getMessage(), e);
+                        logger.error("Error reading campsite file: {}", e.getMessage(), e);
                         return null;
                     }
                 }).filter(Objects::nonNull).toList();
             } catch (Exception e) {
-                logger.log(Level.SEVERE, "Error listing campsites: " + e.getMessage(), e);
+                logger.error("Error listing campsites: {}", e.getMessage(), e);
                 throw new RuntimeException(e);
             }
         });
@@ -147,7 +146,7 @@ public class JsonCampsiteRepository implements ICampsiteRepository {
                 File file = getFile(uuid);
                 return file.exists();
             } catch (Exception e) {
-                logger.log(Level.SEVERE, "Error checking campsite existence: " + e.getMessage(), e);
+                logger.error("Error checking campsite existence: {}", e.getMessage(), e);
                 throw new RuntimeException(e);
             }
         });

@@ -6,6 +6,5 @@ import org.spongepowered.configurate.objectmapping.ConfigSerializable;
 public class MainConfig {
     public String Host = "0.0.0.0";
     public int Port = 25565;
-
-
+    public int ChunkRadius = 13;
 }

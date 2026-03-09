@@ -1,5 +1,7 @@
 package fr.phylisiumstudio.app.view;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import fr.phylisiumstudio.logic.Campsite;
 import fr.phylisiumstudio.logic.activity.Activity;
 import fr.phylisiumstudio.logic.activity.ActivityType;
@@ -7,44 +9,58 @@ import fr.phylisiumstudio.logic.activity.fabric.ActivityDataFabric;
 import fr.phylisiumstudio.logic.client.Client;
 import fr.phylisiumstudio.logic.mapper.PositionMapper;
 import fr.phylisiumstudio.logic.plot.Plot;
+import fr.phylisiumstudio.logic.plot.PlotDataService;
 import fr.phylisiumstudio.logic.plot.PlotType;
-import fr.phylisiumstudio.logic.plot.fabric.PlotDataFabric;
 import fr.phylisiumstudio.logic.service.CampsiteService;
 import fr.phylisiumstudio.logic.service.InstanceService;
 import net.minestom.server.MinecraftServer;
-import net.minestom.server.event.GlobalEventHandler;
 import net.minestom.server.event.instance.InstanceTickEvent;
 import net.minestom.server.event.player.AsyncPlayerConfigurationEvent;
+import net.minestom.server.event.player.PlayerDisconnectEvent;
+import net.minestom.server.event.player.PlayerSpawnEvent;
 import org.joml.Vector3d;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.CopyOnWriteArrayList;
 
+@Singleton
 public class CampsiteView {
-    private List<ClientStateView> clientsStateViews;
+    private static final Logger logger = LoggerFactory.getLogger(CampsiteView.class);
+
+    private final List<ClientStateView> clientsStateViews;
     private final CampsiteService campsiteService;
-    private final PlotDataFabric plotDataFabric;
     private final InstanceService instanceService;
     private final ActivityDataFabric activityDataFabric;
+    private final PlotDataService plotDataService;
+    private final Random random;
 
+    @Inject
     public CampsiteView(CampsiteService campsiteService,
-                        PlotDataFabric plotDataFabric,
                         InstanceService instanceService,
-                        ActivityDataFabric activityDataFabric) {
-        this.clientsStateViews = new ArrayList<>();
+                        ActivityDataFabric activityDataFabric,
+                        PlotDataService plotDataService,
+                        Random random) {
+        this.clientsStateViews = new CopyOnWriteArrayList<>();
         this.campsiteService = campsiteService;
-        this.plotDataFabric = plotDataFabric;
         this.instanceService = instanceService;
         this.activityDataFabric = activityDataFabric;
+        this.plotDataService = plotDataService;
+        this.random = random;
 
-        GlobalEventHandler eventHandler = MinecraftServer.getGlobalEventHandler();
-
-        eventHandler.addListener(AsyncPlayerConfigurationEvent.class, this::AddCamping);
-        eventHandler.addListener(InstanceTickEvent.class, this::Update);
+        var eventHandler = MinecraftServer.getGlobalEventHandler();
+        eventHandler.addListener(AsyncPlayerConfigurationEvent.class, this::addCamping);
+        eventHandler.addListener(InstanceTickEvent.class, this::update);
+        eventHandler.addListener(PlayerDisconnectEvent.class, this::onPlayerDisconnect);
+        eventHandler.addListener(PlayerSpawnEvent.class, event -> {
+            var player = event.getPlayer();
+            player.setAllowFlying(true);
+        });
     }
 
-    public void AddCamping(AsyncPlayerConfigurationEvent event) {
+    public void addCamping(AsyncPlayerConfigurationEvent event) {
         final var player = event.getPlayer();
 
         var campsite = campsiteService.getCampsiteByOwner(player.getUuid())
@@ -56,20 +72,20 @@ public class CampsiteView {
 
         var spawnPoint = new Vector3d(0, 69, 0);
         if(campsite.getPlots().isEmpty()) {
-            var random = new Random();
-            var campData = plotDataFabric.getPlotData(PlotType.CAMPSITE);
-            var carData = plotDataFabric.getPlotData(PlotType.CARAVAN);
+            var randomPlotType = PlotType.values()[random.nextInt(PlotType.values().length)];
+            var campData = plotDataService.getPlotData(randomPlotType);
 
             for (var i = 0; i < 20; i++) {
-                var plotData = random.nextBoolean() ? campData : carData;
-
                 var row = i / 5;
                 var col = i % 5;
                 var xOffset = col * 20;
-                var zOffset = row * (plotData.area().getSize().z + 5);
+                var zOffset = row * (campData.area().getSize().z + 5);
 
                 var offset = new Vector3d(spawnPoint);
-                var plot = new Plot(plotData, offset.add(xOffset, 0, zOffset));
+                // add a small random jitter so the injected Random is used
+                double jitterX = (random.nextDouble() * 2.0) - 1.0; // [-1,1)
+                double jitterZ = (random.nextDouble() * 2.0) - 1.0;
+                var plot = new Plot(offset.add(xOffset + jitterX, 0, zOffset + jitterZ), randomPlotType);
                 campsite.addPlot(plot);
 
                 var client = new Client(plot);
@@ -108,11 +124,11 @@ public class CampsiteView {
         this.clientsStateViews.add(new ClientStateView(campsite, instanceContainer));
     }
 
-    public void Update(InstanceTickEvent event) {
+    public void update(InstanceTickEvent event) {
         var deltaTime = event.getDuration() / 1000f;
 
         for (var clientsStateView : clientsStateViews) {
-            var isLinked = instanceService.IsLinked(
+            var isLinked = instanceService.isLinked(
                     clientsStateView.getCampsite(),
                     event.getInstance()
             );
@@ -120,5 +136,35 @@ public class CampsiteView {
                 clientsStateView.Update(deltaTime);
             }
         }
+    }
+
+    private void onPlayerDisconnect(PlayerDisconnectEvent event) {
+        var player = event.getPlayer();
+        var playerInstance = player.getInstance();
+        if (playerInstance == null) {
+            return;
+        }
+
+        campsiteService.getCampsiteByOwner(player.getUuid()).ifPresent(campsite -> {
+            var remainingPlayers = playerInstance.getPlayers().stream()
+                    .filter(p -> !p.getUuid().equals(player.getUuid()))
+                    .count();
+
+            if (remainingPlayers > 0) {
+                return;
+            }
+
+            clientsStateViews.removeIf(view ->
+                    view.getCampsite().getUniqueID().equals(campsite.getUniqueID()));
+
+            try {
+                instanceService.releaseInstance(campsite);
+            } catch (Exception ex) {
+                logger.error("Error releasing instance for campsite {}: {}",
+                        campsite.getUniqueID(), ex.getMessage(), ex);
+            }
+
+            logger.info("Released instance for campsite {} (last player disconnected)", campsite.getUniqueID());
+        });
     }
 }

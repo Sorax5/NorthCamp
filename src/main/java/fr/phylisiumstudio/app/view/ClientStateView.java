@@ -4,10 +4,14 @@ import fr.phylisiumstudio.logic.Campsite;
 import fr.phylisiumstudio.logic.client.ClientNpc;
 import lombok.Getter;
 import net.minestom.server.instance.InstanceContainer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
 public class ClientStateView {
+    private static final Logger logger = LoggerFactory.getLogger(ClientStateView.class);
+
     @Getter
     private final Campsite campsite;
     private final List<ClientNpc> clientsStateMachines;
@@ -20,6 +24,13 @@ public class ClientStateView {
     }
 
     public void Update(float deltaTime) {
-        clientsStateMachines.forEach(ClientNpc::tick);
+        for (ClientNpc npc : clientsStateMachines) {
+            try {
+                npc.tick();
+            } catch (Exception e) {
+                logger.error("Erreur inattendue lors du tick du NPC dans le camping {}",
+                        campsite.getUniqueID(), e);
+            }
+        }
     }
 }

@@ -11,6 +11,9 @@ repositories {
     maven { url 'https://jitpack.io' }
     maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
     maven { url "https://oss.sonatype.org/content/repositories/releases/" }
+
+    maven { url "https://repo.hypera.dev/snapshots/" } // spark-minestom
+    maven { url "https://repo.lucko.me/" } // spark-common
 }
 
 dependencies {
@@ -19,6 +22,7 @@ dependencies {
     implementation 'ch.qos.logback:logback-classic:1.5.18'
     implementation 'org.spongepowered:configurate-yaml:4.2.0'
     implementation 'com.google.inject:guice:7.0.0'
+    implementation 'com.google.guava:guava:33.5.0-jre'
     implementation group: 'org.joml', name: 'joml', version: '1.10.8'
     implementation 'dev.hollowcube:schem:2.0.1'
 
@@ -35,6 +39,8 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.2'
+
+    implementation("dev.lu15:spark-minestom:1.10-SNAPSHOT")
 }
 
 test {
@@ -43,15 +49,30 @@ test {
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(25)) // Minestom has a minimum Java version of 21
+        languageVersion.set(JavaLanguageVersion.of(25))
     }
+}
+
+tasks.withType(JavaExec).configureEach {
+    jvmArgs '--add-opens', 'java.base/sun.misc=ALL-UNNAMED',
+            '--add-opens', 'java.base/java.lang=ALL-UNNAMED',
+            '--enable-native-access=ALL-UNNAMED',
+            '--sun-misc-unsafe-memory-access=allow'
 }
 
 tasks {
     jar {
         manifest {
             attributes["Main-Class"] = "fr.phylisiumstudio.Main"
+            attributes["Add-Opens"] = "java.base/sun.misc java.base/java.lang"
         }
+    }
+
+    test {
+        jvmArgs '--add-opens', 'java.base/sun.misc=ALL-UNNAMED',
+                '--add-opens', 'java.base/java.lang=ALL-UNNAMED',
+                '--enable-native-access=ALL-UNNAMED',
+                '--sun-misc-unsafe-memory-access=allow'
     }
 
     build {

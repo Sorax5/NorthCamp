@@ -1,11 +1,11 @@
 package fr.phylisiumstudio.logic.area;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import fr.phylisiumstudio.logic.mapper.VectorMapper;
-import lombok.AccessLevel;
 import lombok.Data;
-import lombok.Getter;
 import org.joml.Vector2d;
-import org.joml.Vector2i;
 import org.joml.Vector3d;
 import org.joml.Vector3i;
 
@@ -14,16 +14,30 @@ import java.util.List;
 import java.util.function.Predicate;
 
 @Data
+@JsonAutoDetect(
+        fieldVisibility = JsonAutoDetect.Visibility.NONE,
+        getterVisibility = JsonAutoDetect.Visibility.NONE,
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE
+)
 public class Area {
+    @JsonProperty
     private final Vector3d firstCorner;
+    @JsonProperty
     private final Vector3d secondCorner;
+
+    @JsonCreator
+    public Area(@JsonProperty("firstCorner") Vector3d firstCorner,
+                @JsonProperty("secondCorner") Vector3d secondCorner) {
+        this.firstCorner = firstCorner;
+        this.secondCorner = secondCorner;
+    }
 
     private final Predicate<Vector3i> IS_GROUND_BLOCK = (vec) -> vec.y == getMinCorner().y;
 
     private final Predicate<Vector3i> IS_WALL_BLOCK = (vec) ->
-        (vec.x == getMinCorner().x || vec.x == getMaxCorner().x ||
-         vec.z == getMinCorner().z || vec.z == getMaxCorner().z) &&
-        (vec.y >= getMinCorner().y && vec.y <= getMaxCorner().y);
+            (vec.x == getMinCorner().x || vec.x == getMaxCorner().x ||
+                    vec.z == getMinCorner().z || vec.z == getMaxCorner().z) &&
+                    (vec.y >= getMinCorner().y && vec.y <= getMaxCorner().y);
 
     public Iterable<Vector3i> getBlocksIterator() {
         return () -> new AreaBlockIterator(this);

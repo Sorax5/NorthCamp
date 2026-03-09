@@ -43,3 +43,6 @@ bin/
 /run/config.yml
 /run/campsites/*
 /backups/*
+
+/run/logs/*
+/run/spark/
