@@ -61,8 +61,4 @@ public class ClientEntity extends EntityCreature {
     public void setStanding() {
         this.setPose(EntityPose.STANDING);
     }
-
-    public void setSitting() {
-        this.setPose(EntityPose.SITTING);
-    }
 }
