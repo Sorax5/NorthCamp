@@ -2,7 +2,7 @@ package fr.phylisiumstudio.logic.client.Action.chill;
 
 import com.badlogic.gdx.ai.btree.Task;
 import fr.phylisiumstudio.logic.client.Action.TimedLeafTask;
-import fr.phylisiumstudio.logic.client.ClientNpc;
+import fr.phylisiumstudio.logic.client.ClientEntity;
 
 import java.time.Duration;
 
@@ -29,7 +29,7 @@ public class JustChillHome extends TimedLeafTask {
     }
 
     @Override
-    protected Task<ClientNpc> copyTo(Task<ClientNpc> task) {
+    protected Task<ClientEntity> copyTo(Task<ClientEntity> task) {
         return task;
     }
 }

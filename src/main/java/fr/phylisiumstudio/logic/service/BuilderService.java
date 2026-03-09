@@ -3,8 +3,8 @@ package fr.phylisiumstudio.logic.service;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import fr.phylisiumstudio.logic.Campsite;
-import fr.phylisiumstudio.logic.builder.fabric.BuilderFabric;
-import fr.phylisiumstudio.logic.plot.PlotDataService;
+import fr.phylisiumstudio.logic.builder.ActivityBuilder;
+import fr.phylisiumstudio.logic.builder.PlotBuilder;
 import net.minestom.server.instance.InstanceContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,13 +14,17 @@ import java.util.concurrent.CompletableFuture;
 
 @Singleton
 public class BuilderService {
-    private final BuilderFabric builderFabric;
+    private final PlotBuilder plotBuilder;
+    private final ActivityBuilder activityBuilder;
     private final PlotDataService plotDataService;
+    private final ActivityDataService activityDataService;
     private final Logger logger = LoggerFactory.getLogger(BuilderService.class);
 
     @Inject
-    public BuilderService(BuilderFabric builderFabric, PlotDataService plotDataService) {
-        this.builderFabric = builderFabric;
+    public BuilderService(PlotBuilder plotBuilder, ActivityBuilder activityBuilder, PlotDataService plotDataService, ActivityDataService activityDataService) {
+        this.plotBuilder = plotBuilder;
+        this.activityBuilder = activityBuilder;
+        this.activityDataService = activityDataService;
         this.plotDataService = plotDataService;
     }
 
@@ -28,18 +32,16 @@ public class BuilderService {
         var futures = new ArrayList<CompletableFuture<Void>>();
 
         for (var activity : campsite.getActivities()) {
-            var builder = builderFabric.create("activity");
-            if (builder != null) {
-                futures.add(builder.BuildAsync(activity.getActivityData(), activity, instanceContainer));
+            var activityData = activityDataService.getActivityData(activity.getType());
+            if (activityBuilder != null) {
+                futures.add(activityBuilder.BuildAsync(activityData, activity, instanceContainer));
             }
         }
 
         for (var plot : campsite.getPlots()) {
-            var builder = builderFabric.create("plot");
             var plotData = plotDataService.getPlotData(plot.getPlotType());
-
-            if (builder != null) {
-                futures.add(builder.BuildAsync(plotData, plot, instanceContainer));
+            if (plotBuilder != null) {
+                futures.add(plotBuilder.BuildAsync(plotData, plot, instanceContainer));
             }
         }
 

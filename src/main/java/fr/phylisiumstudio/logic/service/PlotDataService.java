@@ -1,7 +1,10 @@
-package fr.phylisiumstudio.logic.plot;
+package fr.phylisiumstudio.logic.service;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import fr.phylisiumstudio.logic.plot.PlotData;
+import fr.phylisiumstudio.logic.plot.PlotType;
+import fr.phylisiumstudio.logic.repository.IPlotDataRepository;
 
 import java.util.HashMap;
 import java.util.List;

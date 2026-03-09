@@ -3,9 +3,9 @@ package fr.phylisiumstudio.logic.client.Condition;
 import com.badlogic.gdx.ai.btree.LeafTask;
 import com.badlogic.gdx.ai.btree.Task;
 import fr.phylisiumstudio.logic.client.Client;
-import fr.phylisiumstudio.logic.client.ClientNpc;
+import fr.phylisiumstudio.logic.client.ClientEntity;
 
-public class IsClientStateCondition extends LeafTask<ClientNpc> {
+public class IsClientStateCondition extends LeafTask<ClientEntity> {
     public final Client.ClientState conditionState;
 
     public IsClientStateCondition(Client.ClientState conditionState) {
@@ -27,7 +27,7 @@ public class IsClientStateCondition extends LeafTask<ClientNpc> {
     }
 
     @Override
-    protected Task<ClientNpc> copyTo(Task<ClientNpc> task) {
+    protected Task<ClientEntity> copyTo(Task<ClientEntity> task) {
         return task;
     }
 }

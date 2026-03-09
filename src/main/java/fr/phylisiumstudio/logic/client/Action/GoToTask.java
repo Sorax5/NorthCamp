@@ -2,13 +2,13 @@ package fr.phylisiumstudio.logic.client.Action;
 
 import com.badlogic.gdx.ai.btree.LeafTask;
 import com.badlogic.gdx.ai.btree.Task;
-import fr.phylisiumstudio.logic.client.ClientNpc;
+import fr.phylisiumstudio.logic.client.ClientEntity;
 import net.minestom.server.coordinate.Pos;
 
 import java.time.Duration;
 import java.time.Instant;
 
-public class GoToTask extends LeafTask<ClientNpc> {
+public class GoToTask extends LeafTask<ClientEntity> {
     private static final Duration TIMEOUT = Duration.ofSeconds(30);
     private static final Duration STUCK_THRESHOLD = Duration.ofSeconds(5);
     private static final double STUCK_DISTANCE = 0.5;
@@ -78,7 +78,7 @@ public class GoToTask extends LeafTask<ClientNpc> {
     }
 
     @Override
-    protected Task<ClientNpc> copyTo(Task<ClientNpc> task) {
+    protected Task<ClientEntity> copyTo(Task<ClientEntity> task) {
         return task;
     }
 }

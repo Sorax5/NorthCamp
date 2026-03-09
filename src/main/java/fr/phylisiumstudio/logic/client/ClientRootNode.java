@@ -9,10 +9,10 @@ import fr.phylisiumstudio.logic.client.Action.chill.JustChillHome;
 import fr.phylisiumstudio.logic.client.Action.sleep.SleepTask;
 import fr.phylisiumstudio.logic.client.Condition.IsClientStateCondition;
 
-public class ClientRootNode extends Selector<ClientNpc> {
+public class ClientRootNode extends Selector<ClientEntity> {
     public ClientRootNode() {
         // Séquence SLEEPY
-        Sequence<ClientNpc> sleepySequence = new Sequence<>();
+        Sequence<ClientEntity> sleepySequence = new Sequence<>();
         sleepySequence.addChild(new IsClientStateCondition(Client.ClientState.SLEEPY));
         sleepySequence.addChild(new GetPlotLocationTask());
         sleepySequence.addChild(new GoToTask());
@@ -21,24 +21,24 @@ public class ClientRootNode extends Selector<ClientNpc> {
         addChild(sleepySequence);
 
         // Séquence BORED
-        Sequence<ClientNpc> activitySequence = new Sequence<>();
+        Sequence<ClientEntity> activitySequence = new Sequence<>();
         activitySequence.addChild(new ChooseAnActivityAction());
         activitySequence.addChild(new GoToTask());
         activitySequence.addChild(new DoTheActivity());
         activitySequence.addChild(new UpdateClientState());
 
         // Fallback : si l'activité échoue, on force quand même un changement d'état
-        Selector<ClientNpc> activityOrFallback = new Selector<>();
+        Selector<ClientEntity> activityOrFallback = new Selector<>();
         activityOrFallback.addChild(activitySequence);
         activityOrFallback.addChild(new UpdateClientState());
 
-        Sequence<ClientNpc> boredSequence = new Sequence<>();
+        Sequence<ClientEntity> boredSequence = new Sequence<>();
         boredSequence.addChild(new IsClientStateCondition(Client.ClientState.BORED));
         boredSequence.addChild(activityOrFallback);
         addChild(boredSequence);
 
         // Séquence CHILL
-        Sequence<ClientNpc> chillSequence = new Sequence<>();
+        Sequence<ClientEntity> chillSequence = new Sequence<>();
         chillSequence.addChild(new IsClientStateCondition(Client.ClientState.CHILL));
         chillSequence.addChild(new GetPlotLocationTask());
         chillSequence.addChild(new GoToTask());

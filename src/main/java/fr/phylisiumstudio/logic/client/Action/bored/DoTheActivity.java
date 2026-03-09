@@ -2,7 +2,7 @@ package fr.phylisiumstudio.logic.client.Action.bored;
 
 import com.badlogic.gdx.ai.btree.Task;
 import fr.phylisiumstudio.logic.client.Action.TimedLeafTask;
-import fr.phylisiumstudio.logic.client.ClientNpc;
+import fr.phylisiumstudio.logic.client.ClientEntity;
 
 import java.time.Duration;
 
@@ -45,7 +45,7 @@ public class DoTheActivity extends TimedLeafTask {
         var entity = memory.getPlayerEntity();
         var activity = memory.getCurrentActivity();
 
-        entity.setCurrentAction(memory.getClient().getAction().toString(), "Doing " + activity.getActivityData().type());
+        entity.setCurrentAction(memory.getClient().getAction().toString(), "Doing " + activity.getType());
     }
 
     @Override
@@ -58,7 +58,7 @@ public class DoTheActivity extends TimedLeafTask {
     }
 
     @Override
-    protected Task<ClientNpc> copyTo(Task<ClientNpc> task) {
+    protected Task<ClientEntity> copyTo(Task<ClientEntity> task) {
         return task;
     }
 }

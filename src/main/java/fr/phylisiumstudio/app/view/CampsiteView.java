@@ -4,12 +4,12 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import fr.phylisiumstudio.logic.Campsite;
 import fr.phylisiumstudio.logic.activity.Activity;
+import fr.phylisiumstudio.logic.service.ActivityDataService;
 import fr.phylisiumstudio.logic.activity.ActivityType;
-import fr.phylisiumstudio.logic.activity.fabric.ActivityDataFabric;
 import fr.phylisiumstudio.logic.client.Client;
 import fr.phylisiumstudio.logic.mapper.PositionMapper;
 import fr.phylisiumstudio.logic.plot.Plot;
-import fr.phylisiumstudio.logic.plot.PlotDataService;
+import fr.phylisiumstudio.logic.service.PlotDataService;
 import fr.phylisiumstudio.logic.plot.PlotType;
 import fr.phylisiumstudio.logic.service.CampsiteService;
 import fr.phylisiumstudio.logic.service.InstanceService;
@@ -33,26 +33,25 @@ public class CampsiteView {
     private final List<ClientStateView> clientsStateViews;
     private final CampsiteService campsiteService;
     private final InstanceService instanceService;
-    private final ActivityDataFabric activityDataFabric;
+    private final ActivityDataService activityDataService;
     private final PlotDataService plotDataService;
     private final Random random;
 
     @Inject
     public CampsiteView(CampsiteService campsiteService,
                         InstanceService instanceService,
-                        ActivityDataFabric activityDataFabric,
+                        ActivityDataService activityDataService,
                         PlotDataService plotDataService,
                         Random random) {
         this.clientsStateViews = new CopyOnWriteArrayList<>();
         this.campsiteService = campsiteService;
         this.instanceService = instanceService;
-        this.activityDataFabric = activityDataFabric;
+        this.activityDataService = activityDataService;
         this.plotDataService = plotDataService;
         this.random = random;
 
         var eventHandler = MinecraftServer.getGlobalEventHandler();
         eventHandler.addListener(AsyncPlayerConfigurationEvent.class, this::addCamping);
-        eventHandler.addListener(InstanceTickEvent.class, this::update);
         eventHandler.addListener(PlayerDisconnectEvent.class, this::onPlayerDisconnect);
         eventHandler.addListener(PlayerSpawnEvent.class, event -> {
             var player = event.getPlayer();
@@ -72,19 +71,18 @@ public class CampsiteView {
 
         var spawnPoint = new Vector3d(0, 69, 0);
         if(campsite.getPlots().isEmpty()) {
-            var randomPlotType = PlotType.values()[random.nextInt(PlotType.values().length)];
-            var campData = plotDataService.getPlotData(randomPlotType);
 
             for (var i = 0; i < 20; i++) {
+                var randomPlotType = PlotType.values()[random.nextInt(PlotType.values().length)];
+                var campData = plotDataService.getPlotData(randomPlotType);
                 var row = i / 5;
                 var col = i % 5;
                 var xOffset = col * 20;
                 var zOffset = row * (campData.area().getSize().z + 5);
 
                 var offset = new Vector3d(spawnPoint);
-                // add a small random jitter so the injected Random is used
-                double jitterX = (random.nextDouble() * 2.0) - 1.0; // [-1,1)
-                double jitterZ = (random.nextDouble() * 2.0) - 1.0;
+                var jitterX = (random.nextDouble() * 2.0) - 1.0;
+                var jitterZ = (random.nextDouble() * 2.0) - 1.0;
                 var plot = new Plot(offset.add(xOffset + jitterX, 0, zOffset + jitterZ), randomPlotType);
                 campsite.addPlot(plot);
 
@@ -99,8 +97,7 @@ public class CampsiteView {
 
             for (var i = 0; i < activityTypes.length; i++) {
                 var activityType = activityTypes[i];
-                var activityData = activityDataFabric.getActivityData(activityType);
-
+                var activityData = activityDataService.getActivityData(activityType);
                 if (activityData == null) {
                     continue;
                 }
@@ -111,7 +108,7 @@ public class CampsiteView {
                 var zOffset = row * (activityData.area().getSize().z + 5);
 
                 var offset = new Vector3d(activitySpawnPoint).add(xOffset, 0, zOffset);
-                var activity = new Activity(activityData, offset, 15, 5, 2);
+                var activity = new Activity(offset, 15, 5, 2, activityType);
                 campsite.addActivity(activity);
             }
         }
@@ -122,20 +119,6 @@ public class CampsiteView {
         player.setRespawnPoint(PositionMapper.toMinestomPos(spawnPoint));
 
         this.clientsStateViews.add(new ClientStateView(campsite, instanceContainer));
-    }
-
-    public void update(InstanceTickEvent event) {
-        var deltaTime = event.getDuration() / 1000f;
-
-        for (var clientsStateView : clientsStateViews) {
-            var isLinked = instanceService.isLinked(
-                    clientsStateView.getCampsite(),
-                    event.getInstance()
-            );
-            if (isLinked) {
-                clientsStateView.Update(deltaTime);
-            }
-        }
     }
 
     private void onPlayerDisconnect(PlayerDisconnectEvent event) {

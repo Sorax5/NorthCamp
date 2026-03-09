@@ -1,7 +1,7 @@
 package fr.phylisiumstudio.logic.client.Action;
 
 import com.badlogic.gdx.ai.btree.LeafTask;
-import fr.phylisiumstudio.logic.client.ClientNpc;
+import fr.phylisiumstudio.logic.client.ClientEntity;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -11,7 +11,7 @@ import java.time.Instant;
  * Gère automatiquement le démarrage du timer, la vérification de l'écoulement
  * du temps, et le reset à la fin.
  */
-public abstract class TimedLeafTask extends LeafTask<ClientNpc> {
+public abstract class TimedLeafTask extends LeafTask<ClientEntity> {
     private Instant startTime;
 
     /**

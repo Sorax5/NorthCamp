@@ -1,12 +1,15 @@
 package fr.phylisiumstudio.app.view;
 
 import fr.phylisiumstudio.logic.Campsite;
-import fr.phylisiumstudio.logic.client.ClientNpc;
+import fr.phylisiumstudio.logic.client.ClientEntity;
+import fr.phylisiumstudio.logic.client.ClientMemory;
+import fr.phylisiumstudio.logic.mapper.PositionMapper;
 import lombok.Getter;
 import net.minestom.server.instance.InstanceContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class ClientStateView {
@@ -14,23 +17,28 @@ public class ClientStateView {
 
     @Getter
     private final Campsite campsite;
-    private final List<ClientNpc> clientsStateMachines;
+    private final List<ClientEntity> clientEntities;
 
     public ClientStateView(Campsite campsite, InstanceContainer instance) {
         this.campsite = campsite;
-        this.clientsStateMachines = campsite.getClients().stream()
-                .map(client -> new ClientNpc(client, instance, campsite))
-                .toList();
+        this.clientEntities = new ArrayList<>();
+
+        for (var client : campsite.getClients()) {
+            var memory = new ClientMemory(instance, client, campsite);
+            var entity = spawnNpc(memory);
+            clientEntities.add(entity);
+        }
     }
 
-    public void Update(float deltaTime) {
-        for (ClientNpc npc : clientsStateMachines) {
-            try {
-                npc.tick();
-            } catch (Exception e) {
-                logger.error("Erreur inattendue lors du tick du NPC dans le camping {}",
-                        campsite.getUniqueID(), e);
-            }
-        }
+    private ClientEntity spawnNpc(ClientMemory memory) {
+        var spawnLocation = memory.client.getPlot().getPosition();
+        var spawnPos = PositionMapper.toMinestomPos(spawnLocation);
+        var instance = memory.getInstance();
+
+        var entity = new ClientEntity(memory);
+        entity.setInstance(instance, spawnPos);
+
+        memory.setPlayerEntity(entity);
+        return entity;
     }
 }

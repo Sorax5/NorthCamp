@@ -13,6 +13,10 @@ public class AreaBlockIterator implements Iterator<Vector3i> {
     private Vector3i current;
 
     public AreaBlockIterator(Area area) {
+        if (area == null) {
+            throw new NullPointerException("area must not be null");
+        }
+
         this.min = VectorMapper.toVector3i(area.getMinCorner());
         this.max = VectorMapper.toVector3i(area.getMaxCorner());
         this.current = new Vector3i(min);
@@ -29,14 +33,12 @@ public class AreaBlockIterator implements Iterator<Vector3i> {
             throw new NoSuchElementException();
         }
 
-        Vector3i result = new Vector3i(current);
-
-        // Avance x, puis y, puis z, sans imbrication
-        if (current.x < max.x) {
-            current.x++;
+        var result = new Vector3i(current);
+        if (current.z < max.z) {
+            current.z++;
             return result;
         }
-        current.x = min.x;
+        current.z = min.z;
 
         if (current.y < max.y) {
             current.y++;
@@ -44,12 +46,13 @@ public class AreaBlockIterator implements Iterator<Vector3i> {
         }
         current.y = min.y;
 
-        if (current.z < max.z) {
-            current.z++;
+        if (current.x < max.x) {
+            current.x++;
             return result;
         }
 
         current = null;
         return result;
     }
+
 }

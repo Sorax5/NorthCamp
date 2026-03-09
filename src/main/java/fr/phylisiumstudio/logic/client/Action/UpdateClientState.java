@@ -3,9 +3,9 @@ package fr.phylisiumstudio.logic.client.Action;
 import com.badlogic.gdx.ai.btree.LeafTask;
 import com.badlogic.gdx.ai.btree.Task;
 import fr.phylisiumstudio.logic.client.Client;
-import fr.phylisiumstudio.logic.client.ClientNpc;
+import fr.phylisiumstudio.logic.client.ClientEntity;
 
-public class UpdateClientState extends LeafTask<ClientNpc> {
+public class UpdateClientState extends LeafTask<ClientEntity> {
     @Override
     public Status execute() {
         var memory = getObject().getMemory();
@@ -20,7 +20,7 @@ public class UpdateClientState extends LeafTask<ClientNpc> {
     }
 
     @Override
-    protected Task<ClientNpc> copyTo(Task<ClientNpc> task) {
+    protected Task<ClientEntity> copyTo(Task<ClientEntity> task) {
         return task;
     }
 }

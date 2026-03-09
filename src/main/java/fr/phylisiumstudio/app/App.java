@@ -15,16 +15,12 @@ import fr.phylisiumstudio.app.inject.GuiceHandlerInstantiator;
 import fr.phylisiumstudio.app.view.CampsiteView;
 import fr.phylisiumstudio.logic.IApplication;
 import fr.phylisiumstudio.logic.activity.ActivityData;
+import fr.phylisiumstudio.logic.service.ActivityDataService;
 import fr.phylisiumstudio.logic.activity.ActivityType;
-import fr.phylisiumstudio.logic.activity.fabric.ActivityDataFabric;
 import fr.phylisiumstudio.logic.area.Area;
 import fr.phylisiumstudio.logic.builder.ActivityBuilder;
 import fr.phylisiumstudio.logic.builder.PlotBuilder;
-import fr.phylisiumstudio.logic.builder.fabric.BuilderFabric;
-import fr.phylisiumstudio.logic.plot.PlotData;
-import fr.phylisiumstudio.logic.plot.PlotDataService;
-import fr.phylisiumstudio.logic.plot.PlotType;
-import fr.phylisiumstudio.logic.plot.fabric.PlotDataFabric;
+import fr.phylisiumstudio.logic.service.PlotDataService;
 import fr.phylisiumstudio.logic.schematic.SchematicFactory;
 import fr.phylisiumstudio.logic.service.BuilderService;
 import fr.phylisiumstudio.logic.service.CampsiteService;
@@ -59,12 +55,6 @@ public class App implements IApplication {
     private MainConfig mainConfig;
 
     @Inject
-    private PlotDataFabric plotDataFabric;
-    @Inject
-    private ActivityDataFabric activityDataFabric;
-    @Inject
-    private BuilderFabric builderFabric;
-    @Inject
     private InstanceService instanceService;
     @Inject
     private CampsiteService campsiteService;
@@ -72,8 +62,16 @@ public class App implements IApplication {
     private BuilderService builderService;
     @Inject
     private SchematicFactory schematicFactory;
+
     @Inject
     private PlotDataService plotDataService;
+    @Inject
+    private ActivityDataService activityDataService;
+
+    @Inject
+    private ActivityBuilder activityBuilder;
+    @Inject
+    private PlotBuilder plotBuilder;
 
     @Inject
     private MoneyCommand moneyCommand;
@@ -141,8 +139,9 @@ public class App implements IApplication {
 
                 for (var schematicFile : schematicFiles) {
                     var bytes = Files.readAllBytes(schematicFile.toPath());
-                    var schem = SchematicReader.detecting().read(bytes);
+                    var schem = SchematicReader.structure().read(bytes);
                     schematicFactory.registerSchematic(schematicFile.getName(), schem);
+                    logger.info(schem.entities().toString());
                 }
             }
         }
@@ -165,8 +164,7 @@ public class App implements IApplication {
             SimpleModule module = new SimpleModule();
             objectMapper.registerModule(module);
 
-            InjectableValues.Std injectableValues = new InjectableValues.Std();
-            injectableValues.addValue(PlotDataFabric.class, plotDataFabric);
+            var injectableValues = new InjectableValues.Std();
             objectMapper.setInjectableValues(injectableValues);
         }
         catch (Exception e) {
@@ -218,16 +216,7 @@ public class App implements IApplication {
         logger.info("Loading data...");
         try {
             plotDataService.load();
-
-            var defaultArea = new Area(new Vector3d(0,0,0), new Vector3d(8,6,8));
-
-            for (var value : ActivityType.values()) {
-                var activityData = new ActivityData(value, defaultArea);
-                activityDataFabric.registerActivityData(activityData.type(), activityData);
-            }
-
-            builderFabric.register("plot", () -> new PlotBuilder(schematicFactory));
-            builderFabric.register("activity", ActivityBuilder::new);
+            activityDataService.load();
 
             campsiteService.loadCampsites();
         }
@@ -246,8 +235,7 @@ public class App implements IApplication {
             MinecraftServer.getCommandManager().register(new ShutdownCommand());
             MinecraftServer.getCommandManager().register(moneyCommand);
 
-            // Initialize Spark profiler
-            Path sparkDirectory = Path.of(dataFolder.getPath(), "spark");
+            var sparkDirectory = Path.of(dataFolder.getPath(), "spark");
             this.spark = SparkMinestom.builder(sparkDirectory)
                     .commands(true)
                     .permissionHandler((sender, permission) -> true)

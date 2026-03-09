@@ -6,8 +6,6 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import fr.phylisiumstudio.app.inject.annotation.CampsiteRepositoryFile;
 import fr.phylisiumstudio.logic.Campsite;
-import fr.phylisiumstudio.logic.activity.fabric.ActivityDataFabric;
-import fr.phylisiumstudio.logic.plot.fabric.PlotDataFabric;
 import fr.phylisiumstudio.logic.repository.ICampsiteRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,16 +24,12 @@ public class JsonCampsiteRepository implements ICampsiteRepository {
     private final ObjectMapper objectMapper;
 
     @Inject
-    public JsonCampsiteRepository(@CampsiteRepositoryFile File folder, ObjectMapper objectMapper, ActivityDataFabric activityDataFabric, PlotDataFabric plotDataFabric)
+    public JsonCampsiteRepository(@CampsiteRepositoryFile File folder, ObjectMapper objectMapper)
     {
         this.folder = folder;
         this.objectMapper = objectMapper.copy();
 
         InjectableValues.Std injectableValues = new InjectableValues.Std();
-        injectableValues.addValue(ActivityDataFabric.class, activityDataFabric);
-        injectableValues.addValue(ActivityDataFabric.class.getName(), activityDataFabric);
-        injectableValues.addValue(PlotDataFabric.class, plotDataFabric);
-        injectableValues.addValue(PlotDataFabric.class.getName(), plotDataFabric);
         this.objectMapper.setInjectableValues(injectableValues);
 
         if (!this.folder.exists() && !this.folder.mkdirs()) {

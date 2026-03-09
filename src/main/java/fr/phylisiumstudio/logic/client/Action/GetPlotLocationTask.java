@@ -2,10 +2,10 @@ package fr.phylisiumstudio.logic.client.Action;
 
 import com.badlogic.gdx.ai.btree.LeafTask;
 import com.badlogic.gdx.ai.btree.Task;
-import fr.phylisiumstudio.logic.client.ClientNpc;
+import fr.phylisiumstudio.logic.client.ClientEntity;
 import fr.phylisiumstudio.logic.mapper.PositionMapper;
 
-public class GetPlotLocationTask extends LeafTask<ClientNpc> {
+public class GetPlotLocationTask extends LeafTask<ClientEntity> {
     @Override
     public Status execute() {
         var memory = getObject().getMemory();
@@ -28,7 +28,7 @@ public class GetPlotLocationTask extends LeafTask<ClientNpc> {
     }
 
     @Override
-    protected Task<ClientNpc> copyTo(Task<ClientNpc> task) {
+    protected Task<ClientEntity> copyTo(Task<ClientEntity> task) {
         return task;
     }
 }

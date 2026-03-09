@@ -1,5 +1,5 @@
 {
-  "type" : "CARAVAN",
+  "type" : "FISHING",
   "area" : {
     "firstCorner" : {
       "x" : 0.0,
@@ -14,5 +14,5 @@
       "finite" : true
     }
   },
-  "schem" : "caravan.nbt"
+  "schem" : "test.nbt"
 }

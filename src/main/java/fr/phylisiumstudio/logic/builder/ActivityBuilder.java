@@ -1,13 +1,16 @@
 package fr.phylisiumstudio.logic.builder;
 
+import com.google.inject.Singleton;
 import fr.phylisiumstudio.logic.activity.Activity;
 import fr.phylisiumstudio.logic.activity.ActivityData;
-import net.minestom.server.coordinate.Pos;
+import fr.phylisiumstudio.logic.mapper.PositionMapper;
 import net.minestom.server.instance.InstanceContainer;
 import net.minestom.server.instance.block.Block;
+import org.joml.Vector3d;
 
 import java.util.concurrent.CompletableFuture;
 
+@Singleton
 public class ActivityBuilder extends MinestomBuilder<ActivityData, Activity> {
     @Override
     public CompletableFuture<Void> BuildAsync(ActivityData data, Activity state, InstanceContainer instance) {
@@ -17,16 +20,11 @@ public class ActivityBuilder extends MinestomBuilder<ActivityData, Activity> {
         var min = area.getMinCorner();
         var max = area.getMaxCorner();
 
-        int startX = (int) min.x;
-        int endX = (int) max.x;
-        int startZ = (int) min.z;
-        int endZ = (int) max.z;
-
-        for (var x = startX; x <= endX; x++) {
-            for (var z = startZ; z <= endZ; z++) {
-                if (x == startX || x == endX || z == startZ || z == endZ) {
-                    var pos = new Pos(position.x + x, position.y - 1, position.z + z);
-                    instance.setBlock(pos, Block.STONE);
+        for (var x = min.x; x <= max.x; x++) {
+            for (var z = min.z; z <= max.z; z++) {
+                if (x == min.x || x == max.x || z == min.z || z == max.z) {
+                    var vector = new Vector3d(position).add(x, -1, z);
+                    instance.setBlock(PositionMapper.toMinestomPos(vector), Block.STONE);
                 }
             }
         }

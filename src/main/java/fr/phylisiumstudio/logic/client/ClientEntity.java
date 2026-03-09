@@ -1,5 +1,8 @@
 package fr.phylisiumstudio.logic.client;
 
+import com.badlogic.gdx.ai.btree.BehaviorTree;
+import lombok.Data;
+import lombok.Getter;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.minestom.server.component.DataComponents;
@@ -11,10 +14,14 @@ import net.minestom.server.entity.attribute.AttributeInstance;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@Getter
 public class ClientEntity extends EntityCreature {
     private static final Logger logger = LoggerFactory.getLogger(ClientEntity.class);
 
-    public ClientEntity() {
+    private final ClientMemory memory;
+    private final BehaviorTree<ClientEntity> behaviorTree;
+
+    public ClientEntity(ClientMemory memory) {
         super(EntityType.MANNEQUIN);
 
         AttributeInstance speed = this.getAttribute(Attribute.MOVEMENT_SPEED);
@@ -22,6 +29,15 @@ public class ClientEntity extends EntityCreature {
 
         this.setCustomNameVisible(true);
         this.setAutoViewEntities(true);
+
+        this.memory = memory;
+        this.behaviorTree = new BehaviorTree<>(new ClientRootNode(), this);
+    }
+
+    @Override
+    public void tick(long time) {
+        super.tick(time);
+        behaviorTree.step();
     }
 
     public void setCurrentAction(String state, String action) {
