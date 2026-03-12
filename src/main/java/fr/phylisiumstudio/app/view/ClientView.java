@@ -12,14 +12,14 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ClientStateView {
-    private static final Logger logger = LoggerFactory.getLogger(ClientStateView.class);
+public class ClientView {
+    private static final Logger logger = LoggerFactory.getLogger(ClientView.class);
 
     @Getter
     private final Campsite campsite;
     private final List<ClientEntity> clientEntities;
 
-    public ClientStateView(Campsite campsite, InstanceContainer instance) {
+    public ClientView(Campsite campsite, InstanceContainer instance) {
         this.campsite = campsite;
         this.clientEntities = new ArrayList<>();
 
@@ -40,5 +40,12 @@ public class ClientStateView {
 
         memory.setPlayerEntity(entity);
         return entity;
+    }
+
+    private void clear() {
+        for (var entity : clientEntities) {
+            entity.remove();
+        }
+        clientEntities.clear();
     }
 }

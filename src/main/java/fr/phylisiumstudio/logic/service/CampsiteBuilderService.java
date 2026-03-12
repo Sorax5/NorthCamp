@@ -13,15 +13,15 @@ import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
 
 @Singleton
-public class BuilderService {
+public class CampsiteBuilderService {
     private final PlotBuilder plotBuilder;
     private final ActivityBuilder activityBuilder;
     private final PlotDataService plotDataService;
     private final ActivityDataService activityDataService;
-    private final Logger logger = LoggerFactory.getLogger(BuilderService.class);
+    private final Logger logger = LoggerFactory.getLogger(CampsiteBuilderService.class);
 
     @Inject
-    public BuilderService(PlotBuilder plotBuilder, ActivityBuilder activityBuilder, PlotDataService plotDataService, ActivityDataService activityDataService) {
+    public CampsiteBuilderService(PlotBuilder plotBuilder, ActivityBuilder activityBuilder, PlotDataService plotDataService, ActivityDataService activityDataService) {
         this.plotBuilder = plotBuilder;
         this.activityBuilder = activityBuilder;
         this.activityDataService = activityDataService;

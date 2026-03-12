@@ -39,4 +39,10 @@ public class ActivityDataService {
     public List<ActivityData> listActivityData() {
         return activityDataMap.values().stream().toList();
     }
+
+    public void save() {
+        for (var activityData : activityDataMap.values()) {
+            activityRepository.update(activityData);
+        }
+    }
 }

@@ -1,5 +1,5 @@
 {
-  "type" : "FISHING",
+  "type" : "BARBECUE",
   "area" : {
     "firstCorner" : {
       "x" : 0.0,
@@ -16,23 +16,23 @@
   },
   "levels" : [ {
     "price" : 1,
-    "schem" : "FISHING.nbt",
+    "schem" : "BARBECUE.nbt",
     "income" : 1
   }, {
     "price" : 2,
-    "schem" : "FISHING.nbt",
+    "schem" : "BARBECUE.nbt",
     "income" : 1
   }, {
     "price" : 3,
-    "schem" : "FISHING.nbt",
+    "schem" : "BARBECUE.nbt",
     "income" : 1
   }, {
     "price" : 4,
-    "schem" : "FISHING.nbt",
+    "schem" : "BARBECUE.nbt",
     "income" : 1
   }, {
     "price" : 5,
-    "schem" : "FISHING.nbt",
+    "schem" : "BARBECUE.nbt",
     "income" : 1
   } ]
 }

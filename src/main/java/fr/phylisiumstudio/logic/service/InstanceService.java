@@ -24,7 +24,7 @@ public class InstanceService {
     private static final Logger logger = LoggerFactory.getLogger(InstanceService.class);
 
     private final InstanceManager instanceManager;
-    private final BuilderService builderService;
+    private final CampsiteBuilderService campsiteBuilderService;
     private final int chunkRadius;
 
     private final ConcurrentHashMap<UUID, CompletableFuture<InstanceContainer>> instances = new ConcurrentHashMap<>();
@@ -32,8 +32,8 @@ public class InstanceService {
     private final File templateFolder;
 
     @Inject
-    public InstanceService(InstanceManager instanceManager, App app, BuilderService builderService) {
-        this.builderService = builderService;
+    public InstanceService(InstanceManager instanceManager, App app, CampsiteBuilderService campsiteBuilderService) {
+        this.campsiteBuilderService = campsiteBuilderService;
         this.instanceManager = instanceManager;
         this.templateFolder = new File(app.getDataFolder(), "instance");
 
@@ -63,11 +63,57 @@ public class InstanceService {
 
                 var now = Instant.now();
 
+                // Compute chunk range to load. Prefer dynamic range based on campsite plots/activities
+                int marginChunks = 2; // small margin to ensure schematics spanning multiple chunks are covered
+                Integer minChunkX = null, maxChunkX = null, minChunkZ = null, maxChunkZ = null;
+
+                // Inspect plot positions
+                if (campsite != null) {
+                    var plots = campsite.getPlots();
+                    for (int i = 0; i < plots.size(); i++) {
+                        var plot = plots.get(i);
+                        var pos = plot.getPosition();
+                        int cx = (int) Math.floor(pos.x() / 16.0);
+                        int cz = (int) Math.floor(pos.z() / 16.0);
+                        if (minChunkX == null || cx < minChunkX) minChunkX = cx;
+                        if (maxChunkX == null || cx > maxChunkX) maxChunkX = cx;
+                        if (minChunkZ == null || cz < minChunkZ) minChunkZ = cz;
+                        if (maxChunkZ == null || cz > maxChunkZ) maxChunkZ = cz;
+                    }
+
+                    var activities = campsite.getActivities();
+                    for (int i = 0; i < activities.size(); i++) {
+                        var activity = activities.get(i);
+                        var pos = activity.getPosition();
+                        int cx = (int) Math.floor(pos.x() / 16.0);
+                        int cz = (int) Math.floor(pos.z() / 16.0);
+                        if (minChunkX == null || cx < minChunkX) minChunkX = cx;
+                        if (maxChunkX == null || cx > maxChunkX) maxChunkX = cx;
+                        if (minChunkZ == null || cz < minChunkZ) minChunkZ = cz;
+                        if (maxChunkZ == null || cz > maxChunkZ) maxChunkZ = cz;
+                    }
+                }
+
                 var futures = new ArrayList<CompletableFuture<Chunk>>();
-                var halfRadius = chunkRadius / 2;
-                for (var x = -halfRadius; x <= halfRadius; x++) {
-                    for (var z = -halfRadius; z <= halfRadius; z++) {
-                        futures.add(instanceContainer.loadChunk(x, z));
+
+                if (minChunkX == null) {
+                    // fallback: load a square area centered on 0 as before
+                    var halfRadius = chunkRadius / 2;
+                    for (var x = -halfRadius; x <= halfRadius; x++) {
+                        for (var z = -halfRadius; z <= halfRadius; z++) {
+                            futures.add(instanceContainer.loadChunk(x, z));
+                        }
+                    }
+                } else {
+                    int fromX = minChunkX - marginChunks;
+                    int toX = maxChunkX + marginChunks;
+                    int fromZ = minChunkZ - marginChunks;
+                    int toZ = maxChunkZ + marginChunks;
+
+                    for (int x = fromX; x <= toX; x++) {
+                        for (int z = fromZ; z <= toZ; z++) {
+                            futures.add(instanceContainer.loadChunk(x, z));
+                        }
                     }
                 }
 
@@ -76,7 +122,7 @@ public class InstanceService {
                 var duration = Duration.between(now, Instant.now());
                 logger.info("Loaded {} chunks in {} ms for campsite {}", futures.size(), duration.toMillis(), campsite.getUniqueID());
 
-                builderService.BuildCampsiteAsync(campsite, instanceContainer).join();
+                campsiteBuilderService.BuildCampsiteAsync(campsite, instanceContainer).join();
 
                 logger.info("Instance ready for campsite {}", campsite.getUniqueID());
                 return instanceContainer;

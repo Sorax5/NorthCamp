@@ -2,5 +2,7 @@ package fr.phylisiumstudio.logic.activity;
 
 import fr.phylisiumstudio.logic.area.Area;
 
-public record ActivityData(ActivityType type, Area area, String schem) {
+import java.util.List;
+
+public record ActivityData(ActivityType type, Area area, List<ActivityLevel> levels) {
 }

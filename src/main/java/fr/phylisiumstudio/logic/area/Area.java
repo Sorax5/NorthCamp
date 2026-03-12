@@ -17,12 +17,7 @@ import java.util.Objects;
         getterVisibility = JsonAutoDetect.Visibility.NONE,
         isGetterVisibility = JsonAutoDetect.Visibility.NONE
 )
-public class Area {
-    @JsonProperty
-    private final Vector3d firstCorner;
-    @JsonProperty
-    private final Vector3d secondCorner;
-
+public record Area(@JsonProperty Vector3d firstCorner, @JsonProperty Vector3d secondCorner) {
     @JsonCreator
     public Area(@JsonProperty("firstCorner") Vector3d firstCorner,
                 @JsonProperty("secondCorner") Vector3d secondCorner) {
@@ -35,19 +30,20 @@ public class Area {
     public Area(Vector3i a, Vector3i b) {
         Objects.requireNonNull(a, "a must not be null");
         Objects.requireNonNull(b, "b must not be null");
-        this.firstCorner = new Vector3d(a.x, a.y, a.z);
-        this.secondCorner = new Vector3d(b.x, b.y, b.z);
+        this(new Vector3d(a.x, a.y, a.z), new Vector3d(b.x, b.y, b.z));
     }
 
     public static Area fromInts(int x1, int y1, int z1, int x2, int y2, int z2) {
         return new Area(new Vector3d(x1, y1, z1), new Vector3d(x2, y2, z2));
     }
 
-    public Vector3d getFirstCorner() {
+    @Override
+    public Vector3d firstCorner() {
         return new Vector3d(firstCorner);
     }
 
-    public Vector3d getSecondCorner() {
+    @Override
+    public Vector3d secondCorner() {
         return new Vector3d(secondCorner);
     }
 

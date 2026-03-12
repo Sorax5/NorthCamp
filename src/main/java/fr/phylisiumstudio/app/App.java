@@ -1,10 +1,7 @@
 package fr.phylisiumstudio.app;
 
 import com.fasterxml.jackson.databind.InjectableValues;
-import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import fr.phylisiumstudio.app.commands.MoneyCommand;
@@ -12,17 +9,15 @@ import fr.phylisiumstudio.app.commands.ShutdownCommand;
 import fr.phylisiumstudio.app.config.MainConfig;
 import fr.phylisiumstudio.app.inject.AppModule;
 import fr.phylisiumstudio.app.inject.GuiceHandlerInstantiator;
+import fr.phylisiumstudio.app.json.JacksonConfig;
 import fr.phylisiumstudio.app.view.CampsiteView;
 import fr.phylisiumstudio.logic.IApplication;
-import fr.phylisiumstudio.logic.activity.ActivityData;
 import fr.phylisiumstudio.logic.service.ActivityDataService;
-import fr.phylisiumstudio.logic.activity.ActivityType;
-import fr.phylisiumstudio.logic.area.Area;
 import fr.phylisiumstudio.logic.builder.ActivityBuilder;
 import fr.phylisiumstudio.logic.builder.PlotBuilder;
 import fr.phylisiumstudio.logic.service.PlotDataService;
 import fr.phylisiumstudio.logic.schematic.SchematicFactory;
-import fr.phylisiumstudio.logic.service.BuilderService;
+import fr.phylisiumstudio.logic.service.CampsiteBuilderService;
 import fr.phylisiumstudio.logic.service.CampsiteService;
 import fr.phylisiumstudio.logic.service.InstanceService;
 import lombok.Getter;
@@ -30,7 +25,6 @@ import me.lucko.spark.minestom.SparkMinestom;
 import net.hollowcube.schem.reader.SchematicReader;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.instance.InstanceManager;
-import org.joml.Vector3d;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongepowered.configurate.yaml.NodeStyle;
@@ -59,7 +53,7 @@ public class App implements IApplication {
     @Inject
     private CampsiteService campsiteService;
     @Inject
-    private BuilderService builderService;
+    private CampsiteBuilderService campsiteBuilderService;
     @Inject
     private SchematicFactory schematicFactory;
 
@@ -81,9 +75,7 @@ public class App implements IApplication {
     private SparkMinestom spark;
 
     public App() {
-        objectMapper = new ObjectMapper()
-                .enable(SerializationFeature.INDENT_OUTPUT)
-                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        objectMapper = JacksonConfig.create();
 
         if (!dataFolder.exists() && !dataFolder.mkdirs()) {
             logger.warn("Could not create data folder");
@@ -152,7 +144,7 @@ public class App implements IApplication {
 
     public void SetupGuice() {
         try {
-            GuiceHandlerInstantiator handlerInstantiator = new GuiceHandlerInstantiator();
+            var handlerInstantiator = new GuiceHandlerInstantiator();
             objectMapper.setHandlerInstantiator(handlerInstantiator);
 
             this.appModule = new AppModule(this);
@@ -160,9 +152,6 @@ public class App implements IApplication {
 
             handlerInstantiator.setInjector(injector);
             injector.injectMembers(this);
-
-            SimpleModule module = new SimpleModule();
-            objectMapper.registerModule(module);
 
             var injectableValues = new InjectableValues.Std();
             objectMapper.setInjectableValues(injectableValues);

@@ -27,9 +27,9 @@ public class JsonCampsiteRepository implements ICampsiteRepository {
     public JsonCampsiteRepository(@CampsiteRepositoryFile File folder, ObjectMapper objectMapper)
     {
         this.folder = folder;
-        this.objectMapper = objectMapper.copy();
+        this.objectMapper = objectMapper;
 
-        InjectableValues.Std injectableValues = new InjectableValues.Std();
+        var injectableValues = new com.fasterxml.jackson.databind.InjectableValues.Std();
         this.objectMapper.setInjectableValues(injectableValues);
 
         if (!this.folder.exists() && !this.folder.mkdirs()) {

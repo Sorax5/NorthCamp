@@ -29,38 +29,31 @@ public class PlotBuilder extends MinestomBuilder<PlotData, Plot> {
     @Override
     public CompletableFuture<Void> BuildAsync(PlotData data, Plot state, InstanceContainer instance) {
         var future = new CompletableFuture<Void>();
-        try {
-            var schematic = schematicFactory.getSchematic(data.schem());
-            var batch = schematic.createBatch(Rotation.NONE);
+        var schematic = schematicFactory.getSchematic(data.schem());
+        var batch = schematic.createBatch(Rotation.NONE);
 
-            for (var entity : schematic.entities()) {
-                logger.info("Entity in plot schematic: {}", entity);
-            }
+        for (var entity : schematic.entities()) {
+            logger.info("Entity in plot schematic: {}", entity);
+        }
 
-            batch.apply(instance, PositionMapper.toMinestomPos(state.getPosition()), blockBatch -> {
-                var area = data.area();
+        batch.apply(instance, PositionMapper.toMinestomPos(state.getPosition()), blockBatch -> {
+            var area = data.area();
 
-                var areaBlockIterator = new AreaBlockIterator(area);
-                while (areaBlockIterator.hasNext()) {
-                    var vector3i = areaBlockIterator.next();
-                    if (!area.isGroundBlock(vector3i) || !area.isWallBlock(vector3i)) {
-                        continue;
-                    }
-
-                    var wordPosition = VectorMapper.toVector3d(vector3i).add(state.getPosition());
-                    var blockPos = PositionMapper.toMinestomPos(wordPosition);
-                    blockBatch.setBlock(blockPos, Block.WHITE_WOOL);
+            var areaBlockIterator = new AreaBlockIterator(area);
+            while (areaBlockIterator.hasNext()) {
+                var vector3i = areaBlockIterator.next();
+                if (!area.isGroundBlock(vector3i) || !area.isWallBlock(vector3i)) {
+                    continue;
                 }
 
-                future.complete(null);
-            });
+                var wordPosition = VectorMapper.toVector3d(vector3i).add(state.getPosition());
+                var blockPos = PositionMapper.toMinestomPos(wordPosition);
+                blockBatch.setBlock(blockPos, Block.WHITE_WOOL);
+            }
 
-            return future;
-        }
-        catch (Exception e) {
-            System.err.println("Failed to build plot: " + e.getMessage());
-            future.completeExceptionally(e);
-            return future;
-        }
+            future.complete(null);
+        });
+
+        return future;
     }
 }
