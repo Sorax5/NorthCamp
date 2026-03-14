@@ -8,6 +8,7 @@ import fr.phylisiumstudio.logic.client.Action.bored.DoTheActivity;
 import fr.phylisiumstudio.logic.client.Action.chill.JustChillHome;
 import fr.phylisiumstudio.logic.client.Action.sleep.SleepTask;
 import fr.phylisiumstudio.logic.client.Condition.IsClientStateCondition;
+import net.minestom.server.entity.EntityPose;
 
 public class ClientRootNode extends Selector<ClientEntity> {
     public ClientRootNode() {
@@ -16,8 +17,10 @@ public class ClientRootNode extends Selector<ClientEntity> {
         sleepySequence.addChild(new IsClientStateCondition(Client.ClientState.SLEEPY));
         sleepySequence.addChild(new GetPlotLocationTask());
         sleepySequence.addChild(new GoToTask());
+        sleepySequence.addChild(new SetClientPoseAction(EntityPose.SLEEPING));
         sleepySequence.addChild(new SleepTask());
         sleepySequence.addChild(new UpdateClientState());
+        sleepySequence.addChild(new SetClientPoseAction(EntityPose.STANDING));
         addChild(sleepySequence);
 
         // Séquence BORED

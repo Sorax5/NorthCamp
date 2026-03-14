@@ -11,9 +11,26 @@ public class UpdateClientState extends LeafTask<ClientEntity> {
         var memory = getObject().getMemory();
         var client = memory.getClient();
 
-        var states = Client.ClientState.values();
-        var randomIndex = (int) (Math.random() * states.length);
-        var newState = states[randomIndex];
+        double r = Math.random();
+        Client.ClientState newState;
+        if (r < 0.6) {
+            newState = Client.ClientState.BORED; // 60%
+        } else if (r < 0.85) {
+            newState = Client.ClientState.CHILL; // 25%
+        } else {
+            newState = Client.ClientState.SLEEPY; // 15%
+        }
+
+        var current = client.getAction();
+        if (current != null && current == newState) {
+            for (var state : Client.ClientState.values()) {
+                if (state != current) {
+                    newState = state;
+                    break;
+                }
+            }
+        }
+
         client.setAction(newState);
 
         return Status.SUCCEEDED;

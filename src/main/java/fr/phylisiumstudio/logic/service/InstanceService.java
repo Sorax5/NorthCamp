@@ -4,10 +4,7 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import fr.phylisiumstudio.app.App;
 import fr.phylisiumstudio.logic.Campsite;
-import net.minestom.server.instance.Chunk;
-import net.minestom.server.instance.Instance;
-import net.minestom.server.instance.InstanceContainer;
-import net.minestom.server.instance.InstanceManager;
+import net.minestom.server.instance.*;
 import net.minestom.server.instance.anvil.AnvilLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,6 +57,7 @@ public class InstanceService {
                 // Chargement depuis le world template partagé (lecture seule)
                 var loader = new AnvilLoader(templateFolder.toPath());
                 instanceContainer.setChunkLoader(loader);
+                instanceContainer.setChunkSupplier(LightingChunk::new);
 
                 var now = Instant.now();
 
@@ -118,6 +116,7 @@ public class InstanceService {
                 }
 
                 CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+                LightingChunk.relight(instanceContainer, instanceContainer.getChunks());
 
                 var duration = Duration.between(now, Instant.now());
                 logger.info("Loaded {} chunks in {} ms for campsite {}", futures.size(), duration.toMillis(), campsite.getUniqueID());

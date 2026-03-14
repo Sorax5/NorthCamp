@@ -26,7 +26,7 @@ public class DoTheActivity extends TimedLeafTask {
         }
 
         if (!activity.addClient(memory.getClient())) {
-            entity.setCurrentAction(memory.getClient().getAction().toString(), "Oh, c'est plein !");
+            entity.setCurrentAction("Oh, c'est plein !");
             memory.setChoosenActivity(null);
             return false;
         }
@@ -45,7 +45,7 @@ public class DoTheActivity extends TimedLeafTask {
         var entity = memory.getPlayerEntity();
         var activity = memory.getCurrentActivity();
 
-        entity.setCurrentAction(memory.getClient().getAction().toString(), "Doing " + activity.getType());
+        entity.setCurrentAction("Doing " + activity.getType() + " (" + getTimeLeft().toSeconds() + "s left)");
     }
 
     @Override

@@ -22,7 +22,7 @@ public class GetPlotLocationTask extends LeafTask<ClientEntity> {
         var plotPos = PositionMapper.toMinestomPos(plotLocation);
         memory.setTargetPosition(plotPos);
 
-        memory.getPlayerEntity().setCurrentAction(memory.getClient().getAction().toString(), "Heading to plot location");
+        memory.getPlayerEntity().setCurrentAction("Heading to plot location");
 
         return Status.SUCCEEDED;
     }

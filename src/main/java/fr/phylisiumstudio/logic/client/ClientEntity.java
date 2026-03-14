@@ -9,8 +9,11 @@ import net.minestom.server.component.DataComponents;
 import net.minestom.server.entity.EntityCreature;
 import net.minestom.server.entity.EntityPose;
 import net.minestom.server.entity.EntityType;
+import net.minestom.server.entity.PlayerSkin;
 import net.minestom.server.entity.attribute.Attribute;
 import net.minestom.server.entity.attribute.AttributeInstance;
+import net.minestom.server.entity.metadata.avatar.MannequinMeta;
+import net.minestom.server.network.player.ResolvableProfile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,10 +27,22 @@ public class ClientEntity extends EntityCreature {
     public ClientEntity(ClientMemory memory) {
         super(EntityType.MANNEQUIN);
 
+        editEntityMeta(MannequinMeta.class, meta -> {
+            meta.setNotifyAboutChanges(false);
+
+            /*var skin = PlayerSkin.fromUsername("SoraxDubbing");
+            assert skin != null : "Le skin du client n'a pas pu être chargé.";
+            var profile = new ResolvableProfile(skin);
+            meta.setProfile(profile);*/
+
+            meta.setCustomNameVisible(true);
+
+            meta.setNotifyAboutChanges(true);
+        });
+
         AttributeInstance speed = this.getAttribute(Attribute.MOVEMENT_SPEED);
         speed.setBaseValue(0.1);
 
-        this.setCustomNameVisible(true);
         this.setAutoViewEntities(true);
 
         this.memory = memory;
@@ -40,25 +55,13 @@ public class ClientEntity extends EntityCreature {
         behaviorTree.step();
     }
 
-    public void setCurrentAction(String state, String action) {
-        try {
-            var txt = Component.text()
-                    .append(Component.text(state, NamedTextColor.GREEN))
-                    .append(Component.text(" - "))
-                    .append(Component.text(action, NamedTextColor.YELLOW))
-                    .build();
+    public void setCurrentAction(String action) {
+        var txt = Component.text()
+                .append(Component.text(memory.getClient().getAction().toString(), NamedTextColor.GREEN))
+                .append(Component.text(" - "))
+                .append(Component.text(action, NamedTextColor.YELLOW))
+                .build();
 
-            this.set(DataComponents.CUSTOM_NAME, txt);
-        } catch (Exception e) {
-            logger.error("Erreur lors de la mise à jour de l'action pour l'entité {}", getUuid(), e);
-        }
-    }
-
-    public void setSleeping() {
-        this.setPose(EntityPose.SLEEPING);
-    }
-
-    public void setStanding() {
-        this.setPose(EntityPose.STANDING);
+        this.set(DataComponents.CUSTOM_NAME, txt);
     }
 }

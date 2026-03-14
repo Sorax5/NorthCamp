@@ -17,7 +17,6 @@ import fr.phylisiumstudio.logic.plot.PlotType;
 import fr.phylisiumstudio.logic.service.CampsiteService;
 import fr.phylisiumstudio.logic.service.InstanceService;
 import net.minestom.server.MinecraftServer;
-import net.minestom.server.event.instance.InstanceTickEvent;
 import net.minestom.server.event.player.AsyncPlayerConfigurationEvent;
 import net.minestom.server.event.player.PlayerDisconnectEvent;
 import net.minestom.server.event.player.PlayerSpawnEvent;

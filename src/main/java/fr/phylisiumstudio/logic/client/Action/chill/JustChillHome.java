@@ -17,7 +17,7 @@ public class JustChillHome extends TimedLeafTask {
     protected boolean onStart() {
         var memory = getObject().getMemory();
         var entity = memory.getPlayerEntity();
-        entity.setCurrentAction(memory.getClient().getAction().toString(), "Just chilling at home");
+        entity.setCurrentAction("Just chilling at home");
         return true;
     }
 
@@ -25,7 +25,7 @@ public class JustChillHome extends TimedLeafTask {
     protected void onRunning() {
         var memory = getObject().getMemory();
         var entity = memory.getPlayerEntity();
-        entity.setCurrentAction(memory.getClient().getAction().toString(), "Just chilling at home");
+        entity.setCurrentAction("Just chilling at home, time left: " + getTimeLeft().toSeconds() + "s");
     }
 
     @Override

@@ -17,8 +17,7 @@ public class SleepTask extends TimedLeafTask {
     protected boolean onStart() {
         var memory = getObject().getMemory();
         var entity = memory.getPlayerEntity();
-        entity.setCurrentAction(memory.getClient().getAction().toString(), "Sleeping");
-        entity.setSleeping();
+        entity.setCurrentAction("Sleeping");
         return true;
     }
 
@@ -26,14 +25,8 @@ public class SleepTask extends TimedLeafTask {
     protected void onRunning() {
         var memory = getObject().getMemory();
         var entity = memory.getPlayerEntity();
-        entity.setCurrentAction(memory.getClient().getAction().toString(), "Sleeping");
-    }
 
-    @Override
-    protected void onEnd() {
-        var memory = getObject().getMemory();
-        var entity = memory.getPlayerEntity();
-        entity.setStanding();
+        entity.setCurrentAction("Sleeping time left: " + getTimeLeft().toSeconds() + "s");
     }
 
     @Override

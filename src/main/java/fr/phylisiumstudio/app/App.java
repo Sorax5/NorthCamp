@@ -232,7 +232,7 @@ public class App implements IApplication {
             logger.info("Spark profiler enabled.");
 
             server.start(address);
-            logger.info("Server started on " + address);
+            logger.info("Server started on {}", address);
         }
         catch (Exception e) {
             logger.warn("Error starting server", e);

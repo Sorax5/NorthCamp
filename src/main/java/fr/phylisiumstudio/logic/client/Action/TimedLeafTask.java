@@ -42,6 +42,15 @@ public abstract class TimedLeafTask extends LeafTask<ClientEntity> {
     protected void onEnd() {
     }
 
+    protected Duration getTimeLeft() {
+        if (startTime == null) {
+            return getDuration();
+        }
+        var elapsed = Duration.between(startTime, Instant.now());
+        var timeLeft = getDuration().minus(elapsed);
+        return timeLeft.isNegative() ? Duration.ZERO : timeLeft;
+    }
+
     @Override
     public Status execute() {
         if (startTime == null) {
