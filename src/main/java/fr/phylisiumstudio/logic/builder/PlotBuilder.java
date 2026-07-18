@@ -41,10 +41,6 @@ public class PlotBuilder extends MinestomBuilder<PlotData, Plot> {
 
         var batch = schematic.createBatch(Rotation.NONE);
 
-        for (var entity : schematic.entities()) {
-            logger.info("Entity in plot schematic: {}", entity);
-        }
-
         batch.apply(instance, PositionMapper.toMinestomPos(state.getPosition()), blockBatch -> {
             var area = data.area();
 
