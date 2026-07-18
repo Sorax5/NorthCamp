@@ -27,7 +27,7 @@ public class Vector3dDeserializer extends JsonDeserializer<Vector3d> {
         }
 
         while (p.nextToken() != JsonToken.END_OBJECT) {
-            String fieldName = p.getCurrentName();
+            String fieldName = p.currentName();
             p.nextToken();
             if ("x".equals(fieldName)) {
                 x = p.getDoubleValue();

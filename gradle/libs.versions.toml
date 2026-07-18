@@ -6,7 +6,7 @@ configurate = "4.2.0"
 guice = "7.0.0"
 guava = "33.5.0-jre"
 joml = "1.10.8"
-schem = "2.0.1"
+schem = "main-SNAPSHOT"
 gdx-ai = "1.8.2"
 lombok = "1.18.42"
 jackson = "2.18.2"
@@ -21,7 +21,7 @@ configurate-yaml = { module = "org.spongepowered:configurate-yaml", version.ref 
 guice = { module = "com.google.inject:guice", version.ref = "guice" }
 guava = { module = "com.google.guava:guava", version.ref = "guava" }
 joml = { module = "org.joml:joml", version.ref = "joml" }
-schem = { module = "dev.hollowcube:schem", version.ref = "schem" }
+schem = { module = "com.github.Sorax5:schem", version.ref = "schem" }
 gdx-ai = { module = "com.badlogicgames.gdx:gdx-ai", version.ref = "gdx-ai" }
 lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
 spark-minestom = { module = "dev.lu15:spark-minestom", version.ref = "spark" }
