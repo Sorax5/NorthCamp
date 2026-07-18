@@ -11,6 +11,7 @@ import fr.phylisiumstudio.logic.service.CampsiteService;
 import fr.phylisiumstudio.logic.service.InstanceService;
 import fr.phylisiumstudio.logic.skin.SkinLibrary;
 import net.minestom.server.MinecraftServer;
+import net.minestom.server.entity.GameMode;
 import net.minestom.server.event.EventNode;
 import net.minestom.server.event.player.AsyncPlayerConfigurationEvent;
 import net.minestom.server.event.player.PlayerDisconnectEvent;
@@ -64,7 +65,12 @@ public class CampsiteView {
         var node = EventNode.all("campsite-view");
         node.addListener(AsyncPlayerConfigurationEvent.class, this::addCamping);
         node.addListener(PlayerDisconnectEvent.class, this::onPlayerDisconnect);
-        node.addListener(PlayerSpawnEvent.class, event -> event.getPlayer().setAllowFlying(true));
+        node.addListener(PlayerSpawnEvent.class, event -> {
+            var player = event.getPlayer();
+            // Mode aventure : le joueur observe et gère, il ne casse ni ne pose de bloc.
+            player.setGameMode(GameMode.ADVENTURE);
+            player.setAllowFlying(true);
+        });
         MinecraftServer.getGlobalEventHandler().addChild(node);
     }
 

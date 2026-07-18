@@ -5,6 +5,8 @@ import com.google.inject.Singleton;
 import fr.phylisiumstudio.app.App;
 import fr.phylisiumstudio.logic.Campsite;
 import fr.phylisiumstudio.logic.clock.event.PhaseChangeEvent;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import net.minestom.server.event.EventDispatcher;
 import net.minestom.server.instance.Instance;
 import net.minestom.server.timer.Task;
@@ -88,7 +90,16 @@ public class GameClockService {
         var clock = handle.clock();
         if (clock.tick()) {
             instance.setTime(clock.getPhase().minecraftTime());
+            announce(instance, clock);
             EventDispatcher.call(new PhaseChangeEvent(campsite, instance, clock.getPhase(), clock.getDayNumber()));
         }
+    }
+
+    /** Informe les joueurs de l'instance de la transition (l'instance est une Audience). */
+    private void announce(Instance instance, GameClock clock) {
+        var text = clock.getPhase() == GamePhase.DAY
+                ? Component.text("☀ Jour " + clock.getDayNumber(), NamedTextColor.GOLD)
+                : Component.text("🌙 La nuit tombe", NamedTextColor.BLUE);
+        instance.sendMessage(text);
     }
 }
