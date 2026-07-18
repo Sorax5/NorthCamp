@@ -30,6 +30,9 @@ public class Activity {
     private ActivityType type;
     private int currentLevel = 0;
 
+    /** Activité opérationnelle : indisponible tant qu'un employé ne l'a pas entretenue. */
+    private boolean operational = true;
+
     @JsonIgnore
     private List<Client> currentClients = new ArrayList<>();
 

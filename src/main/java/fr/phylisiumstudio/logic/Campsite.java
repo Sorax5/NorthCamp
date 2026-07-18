@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import fr.phylisiumstudio.logic.activity.Activity;
 import fr.phylisiumstudio.logic.client.Client;
 import fr.phylisiumstudio.logic.plot.Plot;
+import fr.phylisiumstudio.logic.staff.Staff;
 import lombok.Getter;
 
 import java.util.ArrayList;
@@ -22,6 +23,7 @@ public class Campsite {
     private final List<Activity> activities;
     private final List<Plot> plots;
     private final List<Client> clients;
+    private final List<Staff> staff;
 
     private double money = 0;
 
@@ -34,6 +36,7 @@ public class Campsite {
         this.activities = new ArrayList<>();
         this.plots = new ArrayList<>();
         this.clients = new ArrayList<>();
+        this.staff = new ArrayList<>();
     }
 
     @JsonCreator
@@ -43,6 +46,7 @@ public class Campsite {
             @JsonProperty("activities") List<Activity> activities,
             @JsonProperty("plots") List<Plot> plots,
             @JsonProperty("clients") List<Client> clients,
+            @JsonProperty("staff") List<Staff> staff,
             @JsonProperty("money") double money,
             @JsonProperty("reputation") double reputation
     ) {
@@ -51,6 +55,7 @@ public class Campsite {
         this.activities = activities != null ? new ArrayList<>(activities) : new ArrayList<>();
         this.plots = plots != null ? new ArrayList<>(plots) : new ArrayList<>();
         this.clients = clients != null ? new ArrayList<>(clients) : new ArrayList<>();
+        this.staff = staff != null ? new ArrayList<>(staff) : new ArrayList<>();
         this.money = money;
         this.reputation = reputation;
     }
@@ -65,6 +70,10 @@ public class Campsite {
 
     public void addClient(Client client) {
         this.clients.add(client);
+    }
+
+    public void addStaff(Staff staff) {
+        this.staff.add(staff);
     }
 
     public void addMoney(double amount) {
