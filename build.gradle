@@ -44,7 +44,6 @@ java {
     }
 }
 
-// Options JVM communes (accès natif + interop bas niveau requis par Minestom).
 def sharedJvmArgs = [
         '--add-opens', 'java.base/sun.misc=ALL-UNNAMED',
         '--add-opens', 'java.base/java.lang=ALL-UNNAMED',

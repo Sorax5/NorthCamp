@@ -71,6 +71,16 @@ public class App implements IApplication {
     private MoneyCommand moneyCommand;
     @Inject
     private fr.phylisiumstudio.app.commands.LeaderboardCommand leaderboardCommand;
+    @Inject
+    private fr.phylisiumstudio.app.commands.CampCommand campCommand;
+    @Inject
+    private fr.phylisiumstudio.app.commands.PricingCommand pricingCommand;
+    @Inject
+    private fr.phylisiumstudio.app.commands.StaffCommand staffCommand;
+    @Inject
+    private fr.phylisiumstudio.app.commands.ClientsCommand clientsCommand;
+    @Inject
+    private fr.phylisiumstudio.app.commands.ActivitiesCommand activitiesCommand;
 
     @Inject
     private CampsiteView campsiteView;
@@ -225,9 +235,15 @@ public class App implements IApplication {
         try {
             var address = new InetSocketAddress(mainConfig.Host, mainConfig.Port);
 
-            MinecraftServer.getCommandManager().register(new ShutdownCommand());
-            MinecraftServer.getCommandManager().register(moneyCommand);
-            MinecraftServer.getCommandManager().register(leaderboardCommand);
+            var commandManager = MinecraftServer.getCommandManager();
+            commandManager.register(new ShutdownCommand());
+            commandManager.register(moneyCommand);
+            commandManager.register(leaderboardCommand);
+            commandManager.register(campCommand);
+            commandManager.register(pricingCommand);
+            commandManager.register(staffCommand);
+            commandManager.register(clientsCommand);
+            commandManager.register(activitiesCommand);
 
             var sparkDirectory = Path.of(dataFolder.getPath(), "spark");
             this.spark = SparkMinestom.builder(sparkDirectory)
