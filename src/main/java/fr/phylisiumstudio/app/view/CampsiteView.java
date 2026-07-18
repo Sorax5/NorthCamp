@@ -9,6 +9,7 @@ import fr.phylisiumstudio.logic.activity.ActivityLevel;
 import fr.phylisiumstudio.logic.area.Area;
 import fr.phylisiumstudio.logic.service.ActivityDataService;
 import fr.phylisiumstudio.logic.activity.ActivityType;
+import fr.phylisiumstudio.logic.clock.GameClockService;
 import fr.phylisiumstudio.logic.client.Client;
 import fr.phylisiumstudio.logic.mapper.PositionMapper;
 import fr.phylisiumstudio.logic.plot.Plot;
@@ -49,6 +50,7 @@ public class CampsiteView {
     private final InstanceService instanceService;
     private final ActivityDataService activityDataService;
     private final PlotDataService plotDataService;
+    private final GameClockService gameClockService;
     private final Random random;
 
     @Inject
@@ -56,12 +58,14 @@ public class CampsiteView {
                         InstanceService instanceService,
                         ActivityDataService activityDataService,
                         PlotDataService plotDataService,
+                        GameClockService gameClockService,
                         Random random) {
         this.clientsStateViews = new CopyOnWriteArrayList<>();
         this.campsiteService = campsiteService;
         this.instanceService = instanceService;
         this.activityDataService = activityDataService;
         this.plotDataService = plotDataService;
+        this.gameClockService = gameClockService;
         this.random = random;
 
         var eventHandler = MinecraftServer.getGlobalEventHandler();
@@ -162,6 +166,7 @@ public class CampsiteView {
         event.setSpawningInstance(instanceContainer);
         player.setRespawnPoint(PositionMapper.toMinestomPos(spawnPoint));
 
+        gameClockService.start(campsite, instanceContainer);
         this.clientsStateViews.add(new ClientView(campsite, instanceContainer));
     }
 
@@ -183,6 +188,8 @@ public class CampsiteView {
 
             clientsStateViews.removeIf(view ->
                     view.getCampsite().getUniqueID().equals(campsite.getUniqueID()));
+
+            gameClockService.stop(campsite.getUniqueID());
 
             try {
                 instanceService.releaseInstance(campsite);
