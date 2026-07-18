@@ -61,9 +61,14 @@ public class StaffView {
             if (present.contains(entry.getKey())) {
                 return false;
             }
-            entry.getValue().remove();
+            despawn(entry.getValue());
             return true;
         });
+    }
+
+    /** Retrait thread-safe via l'API Acquirable (sync() peut tourner hors tick thread). */
+    private static void despawn(StaffEntity entity) {
+        entity.getAcquirable().sync(e -> e.remove());
     }
 
     private StaffEntity spawn(Staff staff, int index) {
@@ -77,7 +82,7 @@ public class StaffView {
     public synchronized void dispose() {
         MinecraftServer.getGlobalEventHandler().removeListener(phaseListener);
         for (var entity : entities.values()) {
-            entity.remove();
+            despawn(entity);
         }
         entities.clear();
     }

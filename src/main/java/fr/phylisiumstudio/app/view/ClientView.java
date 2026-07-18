@@ -78,9 +78,18 @@ public class ClientView {
             if (present.contains(entry.getKey())) {
                 return false;
             }
-            entry.getValue().remove();
+            despawn(entry.getValue());
             return true;
         });
+    }
+
+    /**
+     * Retire une entité de façon thread-safe : la suppression est exécutée sous le
+     * verrou de l'entité (API Acquirable), car {@link #sync()} peut tourner sur un
+     * thread différent de celui qui tick le NPC.
+     */
+    private static void despawn(ClientEntity entity) {
+        entity.getAcquirable().sync(e -> e.remove());
     }
 
     private ClientEntity spawn(Client client) {
@@ -101,7 +110,7 @@ public class ClientView {
     public synchronized void dispose() {
         MinecraftServer.getGlobalEventHandler().removeListener(phaseListener);
         for (var entity : entities.values()) {
-            entity.remove();
+            despawn(entity);
         }
         entities.clear();
     }
