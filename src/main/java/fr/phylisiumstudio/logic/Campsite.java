@@ -16,11 +16,17 @@ public class Campsite {
     private final UUID uniqueID;
     private final UUID ownerID;
 
+    /** Réputation de départ d'un nouveau camping, sur une échelle 0–100. */
+    public static final double DEFAULT_REPUTATION = 50.0;
+
     private final List<Activity> activities;
     private final List<Plot> plots;
     private final List<Client> clients;
 
     private double money = 0;
+
+    /** Réputation du camping (0–100) ; attire plus ou moins de clients. */
+    private double reputation = DEFAULT_REPUTATION;
 
     public Campsite(UUID ownerID) {
         this.uniqueID = UUID.randomUUID();
@@ -37,7 +43,8 @@ public class Campsite {
             @JsonProperty("activities") List<Activity> activities,
             @JsonProperty("plots") List<Plot> plots,
             @JsonProperty("clients") List<Client> clients,
-            @JsonProperty("money") double money
+            @JsonProperty("money") double money,
+            @JsonProperty("reputation") double reputation
     ) {
         this.uniqueID = uniqueID;
         this.ownerID = ownerID;
@@ -45,6 +52,7 @@ public class Campsite {
         this.plots = plots != null ? new ArrayList<>(plots) : new ArrayList<>();
         this.clients = clients != null ? new ArrayList<>(clients) : new ArrayList<>();
         this.money = money;
+        this.reputation = reputation;
     }
 
     public void addActivity(Activity activity) {
@@ -61,5 +69,10 @@ public class Campsite {
 
     public void addMoney(double amount) {
         this.money += amount;
+    }
+
+    /** Ajuste la réputation en la maintenant dans l'intervalle [0, 100]. */
+    public void adjustReputation(double delta) {
+        this.reputation = Math.max(0.0, Math.min(100.0, this.reputation + delta));
     }
 }
