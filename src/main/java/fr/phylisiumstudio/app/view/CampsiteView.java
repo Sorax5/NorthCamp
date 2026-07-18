@@ -108,7 +108,7 @@ public class CampsiteView {
         var reception = layoutService.receptionPosition();
         var exit = layoutService.exitPosition();
         this.clientsStateViews.add(new ClientView(campsite, instanceContainer, reception, exit, skinLibrary, random));
-        this.staffViews.add(new StaffView(campsite, instanceContainer, new Vector3d(STAFF_ORIGIN), skinLibrary));
+        this.staffViews.add(new StaffView(campsite, instanceContainer, new Vector3d(STAFF_ORIGIN), reception, skinLibrary));
         this.placeInfoViews.add(new PlaceInfoView(campsite, instanceContainer, markerRegistry, layoutService));
     }
 
