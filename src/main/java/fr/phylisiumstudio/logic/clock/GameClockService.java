@@ -52,9 +52,10 @@ public class GameClockService {
         handles.computeIfAbsent(campsite.getUniqueID(), _ -> {
             var clock = new GameClock(dayDurationSeconds, nightDurationSeconds);
 
-            // L'horloge de jeu contrôle seule le temps visuel de l'instance.
+            // L'horloge de jeu contrôle seule le temps visuel : on fige la progression
+            // naturelle (rate 0) et on pilote l'heure nous-mêmes à chaque tick.
             instance.setTimeRate(0);
-            instance.setTime(clock.getPhase().minecraftTime());
+            instance.setTime(clock.minecraftTime());
 
             // Planifié sur l'ordonnanceur de l'instance : le tick d'horloge s'exécute
             // sur le thread de tick de l'instance, donc l'accès au temps de l'instance
@@ -88,8 +89,12 @@ public class GameClockService {
             return;
         }
         var clock = handle.clock();
-        if (clock.tick()) {
-            instance.setTime(clock.getPhase().minecraftTime());
+        boolean transitioned = clock.tick();
+
+        // Chaque seconde : le ciel Minecraft suit la progression de l'horloge.
+        instance.setTime(clock.minecraftTime());
+
+        if (transitioned) {
             announce(instance, clock);
             EventDispatcher.call(new PhaseChangeEvent(campsite, instance, clock.getPhase(), clock.getDayNumber()));
         }
