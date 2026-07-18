@@ -72,6 +72,8 @@ public class App implements IApplication {
 
     @Inject
     private CampsiteView campsiteView;
+    @Inject
+    private fr.phylisiumstudio.logic.gameplay.GameplayLoopService gameplayLoopService;
     private SparkMinestom spark;
 
     public App() {
