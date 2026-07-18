@@ -7,6 +7,7 @@ import fr.phylisiumstudio.logic.client.ClientLifecycle;
 import fr.phylisiumstudio.logic.client.ClientMemory;
 import fr.phylisiumstudio.logic.clock.event.PhaseChangeEvent;
 import fr.phylisiumstudio.logic.mapper.PositionMapper;
+import fr.phylisiumstudio.logic.skin.SkinLibrary;
 import lombok.Getter;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.event.EventListener;
@@ -17,6 +18,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 import java.util.UUID;
 
 /**
@@ -31,13 +33,18 @@ public class ClientView {
     private final Campsite campsite;
     private final InstanceContainer instance;
     private final Vector3d receptionPoint;
+    private final SkinLibrary skinLibrary;
+    private final Random random;
     private final Map<UUID, ClientEntity> entities = new HashMap<>();
     private final EventListener<PhaseChangeEvent> phaseListener;
 
-    public ClientView(Campsite campsite, InstanceContainer instance, Vector3d receptionPoint) {
+    public ClientView(Campsite campsite, InstanceContainer instance, Vector3d receptionPoint,
+                      SkinLibrary skinLibrary, Random random) {
         this.campsite = campsite;
         this.instance = instance;
         this.receptionPoint = receptionPoint;
+        this.skinLibrary = skinLibrary;
+        this.random = random;
 
         sync();
 
@@ -82,7 +89,8 @@ public class ClientView {
         var location = client.getPlot() != null ? client.getPlot().getPosition() : receptionPoint;
         var spawnPos = PositionMapper.toMinestomPos(location);
 
-        var entity = new ClientEntity(memory);
+        var skin = skinLibrary.randomClientSkin(random).orElse(null);
+        var entity = new ClientEntity(memory, skin);
         entity.setInstance(instance, spawnPos);
         memory.setPlayerEntity(entity);
         return entity;

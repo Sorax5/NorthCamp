@@ -37,8 +37,7 @@ class StaffServiceTest {
     private static Staff staff(StaffRole role, double skill, double salary) {
         Map<StaffRole, Double> skills = new EnumMap<>(StaffRole.class);
         skills.put(role, skill);
-        var s = new Staff(UUID.randomUUID(), "Bob", skills, salary, role);
-        return s;
+        return new Staff(UUID.randomUUID(), "Bob", skills, salary, StaffLook.VARIANT_A, role);
     }
 
     private static Plot plot() {

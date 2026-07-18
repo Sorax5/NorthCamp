@@ -26,6 +26,9 @@ public class Staff {
     /** Salaire quotidien prélevé sur le camping. */
     private final double dailySalary;
 
+    /** Variante d'apparence cosmétique, déterminant le skin du NPC. */
+    private final StaffLook look;
+
     /** Rôle sur lequel l'employé travaille actuellement ({@code null} = inactif). */
     private StaffRole assignedRole;
 
@@ -35,12 +38,14 @@ public class Staff {
             @JsonProperty("name") String name,
             @JsonProperty("skills") Map<StaffRole, Double> skills,
             @JsonProperty("dailySalary") double dailySalary,
+            @JsonProperty("look") StaffLook look,
             @JsonProperty("assignedRole") StaffRole assignedRole
     ) {
         this.uniqueId = uniqueId != null ? uniqueId : UUID.randomUUID();
         this.name = name;
         this.skills = skills != null ? new EnumMap<>(skills) : new EnumMap<>(StaffRole.class);
         this.dailySalary = dailySalary;
+        this.look = look != null ? look : StaffLook.VARIANT_A;
         this.assignedRole = assignedRole;
     }
 

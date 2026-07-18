@@ -86,6 +86,8 @@ public class App implements IApplication {
     private CampsiteView campsiteView;
     @Inject
     private fr.phylisiumstudio.logic.gameplay.GameplayLoopService gameplayLoopService;
+    @Inject
+    private fr.phylisiumstudio.logic.skin.SkinLibrary skinLibrary;
     private SparkMinestom spark;
 
     public App() {
@@ -102,6 +104,7 @@ public class App implements IApplication {
         LoadConfig();
         SetupGuice();
         loadSchematics();
+        skinLibrary.load();
         LoadData();
         StartServer();
     }

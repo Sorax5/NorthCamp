@@ -45,8 +45,9 @@ public class StaffFactory {
 
         double salary = Math.round(BASE_SALARY + skills.get(specialty) * SALARY_PER_SKILL);
         var name = NAMES.get(random.nextInt(NAMES.size()));
+        var look = random.nextBoolean() ? StaffLook.VARIANT_A : StaffLook.VARIANT_B;
 
-        return new Staff(UUID.randomUUID(), name, skills, salary, specialty);
+        return new Staff(UUID.randomUUID(), name, skills, salary, look, specialty);
     }
 
     public List<Staff> generateCandidates(int count) {

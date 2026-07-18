@@ -9,6 +9,7 @@ import fr.phylisiumstudio.logic.mapper.PositionMapper;
 import fr.phylisiumstudio.logic.seed.CampsiteSeeder;
 import fr.phylisiumstudio.logic.service.CampsiteService;
 import fr.phylisiumstudio.logic.service.InstanceService;
+import fr.phylisiumstudio.logic.skin.SkinLibrary;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.event.player.AsyncPlayerConfigurationEvent;
 import net.minestom.server.event.player.PlayerDisconnectEvent;
@@ -19,6 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 @Singleton
@@ -26,12 +28,16 @@ public class CampsiteView {
     private static final Logger logger = LoggerFactory.getLogger(CampsiteView.class);
 
     private static final Vector3d DEFAULT_SPAWN_POINT = new Vector3d(0, 69, 0);
+    private static final Vector3d STAFF_ORIGIN = new Vector3d(0, 69, -5);
 
     private final List<ClientView> clientsStateViews;
+    private final List<StaffView> staffViews;
     private final CampsiteService campsiteService;
     private final InstanceService instanceService;
     private final GameClockService gameClockService;
     private final CampsiteSeeder campsiteSeeder;
+    private final SkinLibrary skinLibrary;
+    private final Random random;
     private final boolean seedTestCampsite;
 
     @Inject
@@ -39,12 +45,17 @@ public class CampsiteView {
                         InstanceService instanceService,
                         GameClockService gameClockService,
                         CampsiteSeeder campsiteSeeder,
+                        SkinLibrary skinLibrary,
+                        Random random,
                         App app) {
         this.clientsStateViews = new CopyOnWriteArrayList<>();
+        this.staffViews = new CopyOnWriteArrayList<>();
         this.campsiteService = campsiteService;
         this.instanceService = instanceService;
         this.gameClockService = gameClockService;
         this.campsiteSeeder = campsiteSeeder;
+        this.skinLibrary = skinLibrary;
+        this.random = random;
         var config = app.getMainConfig();
         this.seedTestCampsite = config == null || config.SeedTestCampsite;
 
@@ -78,7 +89,8 @@ public class CampsiteView {
         player.setRespawnPoint(PositionMapper.toMinestomPos(spawnPoint));
 
         gameClockService.start(campsite, instanceContainer);
-        this.clientsStateViews.add(new ClientView(campsite, instanceContainer, spawnPoint));
+        this.clientsStateViews.add(new ClientView(campsite, instanceContainer, spawnPoint, skinLibrary, random));
+        this.staffViews.add(new StaffView(campsite, instanceContainer, new Vector3d(STAFF_ORIGIN), skinLibrary));
     }
 
     private void onPlayerDisconnect(PlayerDisconnectEvent event) {
@@ -98,6 +110,14 @@ public class CampsiteView {
             }
 
             clientsStateViews.removeIf(view -> {
+                if (view.getCampsite().getUniqueID().equals(campsite.getUniqueID())) {
+                    view.dispose();
+                    return true;
+                }
+                return false;
+            });
+
+            staffViews.removeIf(view -> {
                 if (view.getCampsite().getUniqueID().equals(campsite.getUniqueID())) {
                     view.dispose();
                     return true;
