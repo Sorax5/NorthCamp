@@ -31,6 +31,20 @@ public class GameClock {
     }
 
     /**
+     * Heure Minecraft (0–23999 ticks) reflétant en continu la progression de
+     * l'horloge : le jeu fait avancer le ciel proportionnellement au temps écoulé
+     * dans la phase, pour que le ciel suive réellement le cycle interne.
+     *
+     * <p>Jour → 0..12000, nuit → 12000..24000.
+     */
+    public long minecraftTime() {
+        int duration = currentDuration();
+        double fraction = duration <= 0 ? 0.0 : Math.min(1.0, (double) secondsInPhase / duration);
+        long base = phase == GamePhase.DAY ? 0L : 12_000L;
+        return (base + Math.round(fraction * 12_000.0)) % 24_000L;
+    }
+
+    /**
      * Avance l'horloge d'une seconde.
      *
      * @return {@code true} si une transition de phase vient de se produire.
