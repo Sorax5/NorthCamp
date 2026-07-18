@@ -4,14 +4,21 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import fr.phylisiumstudio.app.commands.ActivitiesCommand;
+import fr.phylisiumstudio.app.commands.CampCommand;
+import fr.phylisiumstudio.app.commands.ClientsCommand;
+import fr.phylisiumstudio.app.commands.LeaderboardCommand;
 import fr.phylisiumstudio.app.commands.MoneyCommand;
+import fr.phylisiumstudio.app.commands.PricingCommand;
 import fr.phylisiumstudio.app.commands.ShutdownCommand;
+import fr.phylisiumstudio.app.commands.StaffCommand;
 import fr.phylisiumstudio.app.config.MainConfig;
 import fr.phylisiumstudio.app.inject.AppModule;
 import fr.phylisiumstudio.app.inject.GuiceHandlerInstantiator;
 import fr.phylisiumstudio.app.json.JacksonConfig;
 import fr.phylisiumstudio.app.view.CampsiteView;
 import fr.phylisiumstudio.logic.IApplication;
+import fr.phylisiumstudio.logic.gameplay.GameplayLoopService;
 import fr.phylisiumstudio.logic.service.ActivityDataService;
 import fr.phylisiumstudio.logic.builder.ActivityBuilder;
 import fr.phylisiumstudio.logic.builder.PlotBuilder;
@@ -20,6 +27,7 @@ import fr.phylisiumstudio.logic.schematic.SchematicFactory;
 import fr.phylisiumstudio.logic.service.CampsiteBuilderService;
 import fr.phylisiumstudio.logic.service.CampsiteService;
 import fr.phylisiumstudio.logic.service.InstanceService;
+import fr.phylisiumstudio.logic.skin.SkinLibrary;
 import lombok.Getter;
 import me.lucko.spark.minestom.SparkMinestom;
 import net.hollowcube.schem.reader.SchematicReader;
@@ -70,24 +78,24 @@ public class App implements IApplication {
     @Inject
     private MoneyCommand moneyCommand;
     @Inject
-    private fr.phylisiumstudio.app.commands.LeaderboardCommand leaderboardCommand;
+    private LeaderboardCommand leaderboardCommand;
     @Inject
-    private fr.phylisiumstudio.app.commands.CampCommand campCommand;
+    private CampCommand campCommand;
     @Inject
-    private fr.phylisiumstudio.app.commands.PricingCommand pricingCommand;
+    private PricingCommand pricingCommand;
     @Inject
-    private fr.phylisiumstudio.app.commands.StaffCommand staffCommand;
+    private StaffCommand staffCommand;
     @Inject
-    private fr.phylisiumstudio.app.commands.ClientsCommand clientsCommand;
+    private ClientsCommand clientsCommand;
     @Inject
-    private fr.phylisiumstudio.app.commands.ActivitiesCommand activitiesCommand;
+    private ActivitiesCommand activitiesCommand;
 
     @Inject
     private CampsiteView campsiteView;
     @Inject
-    private fr.phylisiumstudio.logic.gameplay.GameplayLoopService gameplayLoopService;
+    private GameplayLoopService gameplayLoopService;
     @Inject
-    private fr.phylisiumstudio.logic.skin.SkinLibrary skinLibrary;
+    private SkinLibrary skinLibrary;
     private SparkMinestom spark;
 
     public App() {

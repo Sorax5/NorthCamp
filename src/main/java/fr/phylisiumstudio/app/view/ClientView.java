@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Vue responsable des entités NPC d'un camping. Synchronise dynamiquement les
@@ -71,7 +72,7 @@ public class ClientView {
         var present = campsite.getClients().stream()
                 .filter(c -> c.getLifecycle() != ClientLifecycle.GONE)
                 .map(Client::getUniqueID)
-                .collect(java.util.stream.Collectors.toSet());
+                .collect(Collectors.toSet());
 
         entities.entrySet().removeIf(entry -> {
             if (present.contains(entry.getKey())) {
