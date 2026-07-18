@@ -165,7 +165,6 @@ public class App implements IApplication {
                     var bytes = Files.readAllBytes(schematicFile.toPath());
                     var schem = SchematicReader.structure().read(bytes);
                     schematicFactory.registerSchematic(schematicFile.getName(), schem);
-                    logger.info(schem.entities().toString());
                 }
             }
         }

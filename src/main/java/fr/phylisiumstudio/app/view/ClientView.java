@@ -9,7 +9,6 @@ import fr.phylisiumstudio.logic.clock.event.PhaseChangeEvent;
 import fr.phylisiumstudio.logic.mapper.PositionMapper;
 import fr.phylisiumstudio.logic.skin.SkinLibrary;
 import lombok.Getter;
-import net.minestom.server.MinecraftServer;
 import net.minestom.server.event.EventListener;
 import net.minestom.server.instance.InstanceContainer;
 import org.joml.Vector3d;
@@ -49,13 +48,10 @@ public class ClientView {
 
         sync();
 
-        // Re-synchronise les entités à chaque nouveau jour (arrivées/départs).
-        this.phaseListener = EventListener.of(PhaseChangeEvent.class, event -> {
-            if (event.campsite().getUniqueID().equals(campsite.getUniqueID())) {
-                sync();
-            }
-        });
-        MinecraftServer.getGlobalEventHandler().addListener(phaseListener);
+        // Abonné au nœud d'événements de l'instance : ne reçoit que les transitions
+        // de ce camping (PhaseChangeEvent est un InstanceEvent), nettoyé avec l'instance.
+        this.phaseListener = EventListener.of(PhaseChangeEvent.class, event -> sync());
+        instance.eventNode().addListener(phaseListener);
     }
 
     /** Aligne les entités présentes sur l'état courant de la liste de clients. */
@@ -108,7 +104,7 @@ public class ClientView {
 
     /** Libère les entités et le listener ; à appeler à la fin de la session. */
     public synchronized void dispose() {
-        MinecraftServer.getGlobalEventHandler().removeListener(phaseListener);
+        instance.eventNode().removeListener(phaseListener);
         for (var entity : entities.values()) {
             despawn(entity);
         }

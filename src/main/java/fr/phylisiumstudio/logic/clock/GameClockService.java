@@ -5,7 +5,6 @@ import com.google.inject.Singleton;
 import fr.phylisiumstudio.app.App;
 import fr.phylisiumstudio.logic.Campsite;
 import fr.phylisiumstudio.logic.clock.event.PhaseChangeEvent;
-import net.minestom.server.MinecraftServer;
 import net.minestom.server.event.EventDispatcher;
 import net.minestom.server.instance.Instance;
 import net.minestom.server.timer.Task;
@@ -55,10 +54,13 @@ public class GameClockService {
             instance.setTimeRate(0);
             instance.setTime(clock.getPhase().minecraftTime());
 
-            var task = MinecraftServer.getSchedulerManager()
-                    .buildTask(() -> tick(campsite, instance))
-                    .repeat(TaskSchedule.seconds(1))
-                    .schedule();
+            // Planifié sur l'ordonnanceur de l'instance : le tick d'horloge s'exécute
+            // sur le thread de tick de l'instance, donc l'accès au temps de l'instance
+            // et la diffusion de l'événement sont thread-safe par construction.
+            var task = instance.scheduler().submitTask(() -> {
+                tick(campsite, instance);
+                return TaskSchedule.seconds(1);
+            });
 
             logger.info("Game clock started for campsite {}", campsite.getUniqueID());
             return new Handle(clock, task);
@@ -86,7 +88,7 @@ public class GameClockService {
         var clock = handle.clock();
         if (clock.tick()) {
             instance.setTime(clock.getPhase().minecraftTime());
-            EventDispatcher.call(new PhaseChangeEvent(campsite, clock.getPhase(), clock.getDayNumber()));
+            EventDispatcher.call(new PhaseChangeEvent(campsite, instance, clock.getPhase(), clock.getDayNumber()));
         }
     }
 }
