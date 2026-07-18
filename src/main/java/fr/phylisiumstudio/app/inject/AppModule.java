@@ -4,14 +4,16 @@ import com.google.inject.*;
 import fr.phylisiumstudio.app.App;
 import fr.phylisiumstudio.app.config.MainConfig;
 import fr.phylisiumstudio.app.inject.annotation.CampsiteRepositoryFile;
+import fr.phylisiumstudio.app.inject.annotation.ContentMapper;
 import fr.phylisiumstudio.app.inject.annotation.PlotDataRepositoryFile;
 import fr.phylisiumstudio.app.inject.annotation.ActivityRepositoryFile;
+import fr.phylisiumstudio.app.json.JacksonConfig;
 import fr.phylisiumstudio.logic.repository.IPlotDataRepository;
 import fr.phylisiumstudio.logic.repository.ICampsiteRepository;
 import fr.phylisiumstudio.logic.repository.IActivityRepository;
 import fr.phylisiumstudio.storage.JsonCampsiteRepository;
-import fr.phylisiumstudio.storage.JsonPlotDataRepository;
-import fr.phylisiumstudio.storage.JsonActivityRepository;
+import fr.phylisiumstudio.storage.YamlPlotDataRepository;
+import fr.phylisiumstudio.storage.YamlActivityRepository;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.instance.InstanceManager;
 
@@ -35,8 +37,9 @@ public class AppModule extends AbstractModule {
         super.configure();
 
         bind(ICampsiteRepository.class).to(JsonCampsiteRepository.class).in(Singleton.class);
-        bind(IPlotDataRepository.class).to(JsonPlotDataRepository.class).in(Singleton.class);
-        bind(IActivityRepository.class).to(JsonActivityRepository.class).in(Singleton.class);
+        bind(IPlotDataRepository.class).to(YamlPlotDataRepository.class).in(Singleton.class);
+        bind(IActivityRepository.class).to(YamlActivityRepository.class).in(Singleton.class);
+        bind(ObjectMapper.class).annotatedWith(ContentMapper.class).toInstance(JacksonConfig.createYaml());
         bind(MinecraftServer.class).toInstance(app.getServer());
         bind(InstanceManager.class).toInstance(app.getInstanceManager());
         bind(App.class).toInstance(app);

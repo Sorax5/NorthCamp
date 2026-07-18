@@ -1,0 +1,21 @@
+type: "CARAVAN"
+area:
+  firstCorner:
+    x: 0.0
+    y: 0.0
+    z: 0.0
+  secondCorner:
+    x: 8.0
+    y: 6.0
+    z: 8.0
+schem: "caravan.nbt"
+levels:
+- price: 0
+  schem: "caravan.nbt"
+  income: 15
+- price: 800
+  schem: "caravan.nbt"
+  income: 30
+- price: 2000
+  schem: "caravan.nbt"
+  income: 50
