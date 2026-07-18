@@ -17,6 +17,9 @@ public final class MarkerTags {
     /** Point où le NPC apparaît avant de rejoindre l'accueil. */
     public static final String NPC_SPAWN = "npc_spawn";
 
+    /** Point de sortie : le client s'y rend en fin de séjour avant de disparaître. */
+    public static final String EXIT = "exit";
+
     // ── Accueil global ──────────────────────────────────────────────────────
     /** Comptoir d'accueil où patientent les clients. */
     public static final String RECEPTION = "reception";

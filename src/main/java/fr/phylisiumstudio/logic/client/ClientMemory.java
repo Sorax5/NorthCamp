@@ -16,4 +16,9 @@ public class ClientMemory {
 
     public Activity choosenActivity;
     public Activity currentActivity;
+
+    /** Point d'accueil où patientent les clients en attente. */
+    public Pos receptionPosition;
+    /** Point de sortie rejoint en fin de séjour avant despawn. */
+    public Pos exitPosition;
 }

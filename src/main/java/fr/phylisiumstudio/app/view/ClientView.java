@@ -33,16 +33,18 @@ public class ClientView {
     private final Campsite campsite;
     private final InstanceContainer instance;
     private final Vector3d receptionPoint;
+    private final Vector3d exitPoint;
     private final SkinLibrary skinLibrary;
     private final Random random;
     private final Map<UUID, ClientEntity> entities = new HashMap<>();
     private final EventListener<PhaseChangeEvent> phaseListener;
 
     public ClientView(Campsite campsite, InstanceContainer instance, Vector3d receptionPoint,
-                      SkinLibrary skinLibrary, Random random) {
+                      Vector3d exitPoint, SkinLibrary skinLibrary, Random random) {
         this.campsite = campsite;
         this.instance = instance;
         this.receptionPoint = receptionPoint;
+        this.exitPoint = exitPoint;
         this.skinLibrary = skinLibrary;
         this.random = random;
 
@@ -90,6 +92,8 @@ public class ClientView {
 
     private ClientEntity spawn(Client client) {
         var memory = new ClientMemory(instance, client, campsite);
+        memory.setReceptionPosition(PositionMapper.toMinestomPos(receptionPoint));
+        memory.setExitPosition(PositionMapper.toMinestomPos(exitPoint));
 
         // Les clients en attente patientent à l'accueil ; les autres sur leur emplacement.
         var location = client.getPlot() != null ? client.getPlot().getPosition() : receptionPoint;

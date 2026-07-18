@@ -27,6 +27,10 @@ public class LayoutService {
     private static final String LAYOUT_SCHEMATIC = "layout.nbt";
     private static final Vector3d ORIGIN = new Vector3d(0, 69, 0);
 
+    // Positions par défaut des points globaux, à l'écart de la grille de plots.
+    private static final Vector3d DEFAULT_RECEPTION = new Vector3d(-8, 69, -8);
+    private static final Vector3d DEFAULT_EXIT = new Vector3d(-14, 69, -8);
+
     // Grille par défaut si aucun layout n'est fourni.
     private static final int DEFAULT_PLOT_SLOTS = 12;
     private static final int DEFAULT_ACTIVITY_SLOTS = 4;
@@ -37,6 +41,13 @@ public class LayoutService {
 
     private final List<Vector3d> plotSlots = new ArrayList<>();
     private final List<Vector3d> activitySlots = new ArrayList<>();
+
+    // Points globaux : marqueur du layout si présent, sinon position par défaut
+    // (dont l'absence est signalée par un panneau in-game).
+    private Vector3d reception = DEFAULT_RECEPTION;
+    private Vector3d exit = DEFAULT_EXIT;
+    private boolean receptionFromMarker;
+    private boolean exitFromMarker;
 
     @Inject
     public LayoutService(SchematicFactory schematicFactory) {
@@ -53,6 +64,11 @@ public class LayoutService {
             var markers = MarkerSet.resolve(layout, ORIGIN, Rotation.NONE);
             plotSlots.addAll(markers.all(MarkerTags.PLOT_SLOT));
             activitySlots.addAll(markers.all(MarkerTags.ACTIVITY_SLOT));
+
+            receptionFromMarker = markers.has(MarkerTags.RECEPTION);
+            exitFromMarker = markers.has(MarkerTags.EXIT);
+            reception = markers.firstOr(MarkerTags.RECEPTION, DEFAULT_RECEPTION);
+            exit = markers.firstOr(MarkerTags.EXIT, DEFAULT_EXIT);
         }
 
         if (plotSlots.isEmpty()) {
@@ -71,6 +87,24 @@ public class LayoutService {
 
     public List<Vector3d> activitySlotPositions() {
         return List.copyOf(activitySlots);
+    }
+
+    public Vector3d receptionPosition() {
+        return new Vector3d(reception);
+    }
+
+    public Vector3d exitPosition() {
+        return new Vector3d(exit);
+    }
+
+    /** Vrai si l'accueil provient d'un marqueur (sinon position par défaut). */
+    public boolean isReceptionFromMarker() {
+        return receptionFromMarker;
+    }
+
+    /** Vrai si la sortie provient d'un marqueur (sinon position par défaut). */
+    public boolean isExitFromMarker() {
+        return exitFromMarker;
     }
 
     private net.hollowcube.schem.Schematic tryGetLayout() {

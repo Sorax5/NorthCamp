@@ -86,14 +86,6 @@ public class GameplayLoopService {
         marketService.fluctuate();
         degradeActivities(campsite);
 
-        // Les clients en départ la veille quittent définitivement les lieux.
-        for (var client : campsite.getClients()) {
-            if (client.getLifecycle() == ClientLifecycle.LEAVING) {
-                satisfactionService.applyDeparture(campsite, client);
-                stayService.depart(client);
-            }
-        }
-
         // Les clients en attente trop insatisfaits abandonnent la file (perte + réputation).
         int abandoned = 0;
         for (var client : campsite.getClients()) {
@@ -105,9 +97,23 @@ public class GameplayLoopService {
             }
         }
 
+        // Les clients qui partaient hier et n'ont pas fini de sortir quittent
+        // définitivement (leur impact réputation a déjà été appliqué à la fin du séjour).
+        for (var client : campsite.getClients()) {
+            if (client.getLifecycle() == ClientLifecycle.LEAVING) {
+                stayService.depart(client);
+            }
+        }
+
+        // Retire tous les partis (despawn par l'IA, abandons, sorties forcées).
         stayService.removeDeparted(campsite);
 
+        // Les séjours avancent ; ceux qui se terminent passent en LEAVING et leur
+        // satisfaction finale est reportée maintenant sur la réputation.
         var departing = stayService.advanceDay(campsite);
+        for (var client : departing) {
+            satisfactionService.applyDeparture(campsite, client);
+        }
 
         var arrivals = arrivalGenerator.generate(arrivalCount(campsite, dayNumber));
         campsite.getClients().addAll(arrivals);

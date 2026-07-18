@@ -11,6 +11,7 @@ import fr.phylisiumstudio.logic.seed.CampsiteSeeder;
 import fr.phylisiumstudio.logic.service.CampsiteService;
 import fr.phylisiumstudio.logic.service.InstanceService;
 import fr.phylisiumstudio.logic.skin.SkinLibrary;
+import fr.phylisiumstudio.logic.slot.LayoutService;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.entity.GameMode;
 import net.minestom.server.event.EventNode;
@@ -42,6 +43,7 @@ public class CampsiteView {
     private final CampsiteSeeder campsiteSeeder;
     private final SkinLibrary skinLibrary;
     private final MarkerRegistry markerRegistry;
+    private final LayoutService layoutService;
     private final Random random;
     private final boolean seedTestCampsite;
 
@@ -52,6 +54,7 @@ public class CampsiteView {
                         CampsiteSeeder campsiteSeeder,
                         SkinLibrary skinLibrary,
                         MarkerRegistry markerRegistry,
+                        LayoutService layoutService,
                         Random random,
                         App app) {
         this.clientsStateViews = new CopyOnWriteArrayList<>();
@@ -63,6 +66,7 @@ public class CampsiteView {
         this.campsiteSeeder = campsiteSeeder;
         this.skinLibrary = skinLibrary;
         this.markerRegistry = markerRegistry;
+        this.layoutService = layoutService;
         this.random = random;
         var config = app.getMainConfig();
         this.seedTestCampsite = config == null || config.SeedTestCampsite;
@@ -101,9 +105,11 @@ public class CampsiteView {
         player.setRespawnPoint(PositionMapper.toMinestomPos(spawnPoint));
 
         gameClockService.start(campsite, instanceContainer);
-        this.clientsStateViews.add(new ClientView(campsite, instanceContainer, spawnPoint, skinLibrary, random));
+        var reception = layoutService.receptionPosition();
+        var exit = layoutService.exitPosition();
+        this.clientsStateViews.add(new ClientView(campsite, instanceContainer, reception, exit, skinLibrary, random));
         this.staffViews.add(new StaffView(campsite, instanceContainer, new Vector3d(STAFF_ORIGIN), skinLibrary));
-        this.placeInfoViews.add(new PlaceInfoView(campsite, instanceContainer, markerRegistry));
+        this.placeInfoViews.add(new PlaceInfoView(campsite, instanceContainer, markerRegistry, layoutService));
     }
 
     private void onPlayerDisconnect(PlayerDisconnectEvent event) {
