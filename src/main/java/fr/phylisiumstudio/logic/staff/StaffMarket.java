@@ -3,6 +3,7 @@ package fr.phylisiumstudio.logic.staff;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -27,13 +28,17 @@ public class StaffMarket {
 
     /** Candidats actuellement proposés à un camping, générés au premier accès. */
     public List<Staff> candidates(UUID campsiteId) {
-        return candidatesByCampsite.computeIfAbsent(campsiteId,
-                _ -> staffFactory.generateCandidates(CANDIDATE_POOL_SIZE));
+        return candidatesByCampsite.computeIfAbsent(campsiteId, _ -> generatePool());
     }
 
     /** Régénère le vivier (nouvelle fournée de candidats). */
     public void refresh(UUID campsiteId) {
-        candidatesByCampsite.put(campsiteId, staffFactory.generateCandidates(CANDIDATE_POOL_SIZE));
+        candidatesByCampsite.put(campsiteId, generatePool());
+    }
+
+    /** Liste mutable : le vivier est modifié quand un candidat est recruté. */
+    private List<Staff> generatePool() {
+        return new ArrayList<>(staffFactory.generateCandidates(CANDIDATE_POOL_SIZE));
     }
 
     /** Retire un candidat du vivier (une fois recruté). */
