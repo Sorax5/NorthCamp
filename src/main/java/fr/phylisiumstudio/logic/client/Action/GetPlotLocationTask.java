@@ -4,6 +4,8 @@ import com.badlogic.gdx.ai.btree.LeafTask;
 import com.badlogic.gdx.ai.btree.Task;
 import fr.phylisiumstudio.logic.client.ClientEntity;
 import fr.phylisiumstudio.logic.mapper.PositionMapper;
+import fr.phylisiumstudio.logic.marker.MarkerRegistry;
+import fr.phylisiumstudio.logic.marker.MarkerTags;
 
 public class GetPlotLocationTask extends LeafTask<ClientEntity> {
     @Override
@@ -14,10 +16,14 @@ public class GetPlotLocationTask extends LeafTask<ClientEntity> {
             return Status.SUCCEEDED;
         }
 
-        var plotLocation = memory.getClient().getPlot().getPosition();
-        if (plotLocation == null) {
+        var plot = memory.getClient().getPlot();
+        if (plot == null || plot.getPosition() == null) {
             return Status.FAILED;
         }
+
+        // Cible = marqueur de sommeil du schématic si présent, sinon la position du plot.
+        var plotLocation = MarkerRegistry.instance().get(plot.getUniqueID())
+                .firstOr(MarkerTags.SLEEP, plot.getPosition());
 
         var plotPos = PositionMapper.toMinestomPos(plotLocation);
         memory.setTargetPosition(plotPos);

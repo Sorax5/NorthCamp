@@ -11,6 +11,7 @@ import fr.phylisiumstudio.app.commands.LeaderboardCommand;
 import fr.phylisiumstudio.app.commands.MoneyCommand;
 import fr.phylisiumstudio.app.commands.PricingCommand;
 import fr.phylisiumstudio.app.commands.ShutdownCommand;
+import fr.phylisiumstudio.app.commands.SlotsCommand;
 import fr.phylisiumstudio.app.commands.StaffCommand;
 import fr.phylisiumstudio.app.config.MainConfig;
 import fr.phylisiumstudio.app.inject.AppModule;
@@ -28,6 +29,7 @@ import fr.phylisiumstudio.logic.service.CampsiteBuilderService;
 import fr.phylisiumstudio.logic.service.CampsiteService;
 import fr.phylisiumstudio.logic.service.InstanceService;
 import fr.phylisiumstudio.logic.skin.SkinLibrary;
+import fr.phylisiumstudio.logic.slot.LayoutService;
 import lombok.Getter;
 import me.lucko.spark.minestom.SparkMinestom;
 import net.hollowcube.schem.reader.SchematicReader;
@@ -89,6 +91,8 @@ public class App implements IApplication {
     private ClientsCommand clientsCommand;
     @Inject
     private ActivitiesCommand activitiesCommand;
+    @Inject
+    private SlotsCommand slotsCommand;
 
     @Inject
     private CampsiteView campsiteView;
@@ -96,6 +100,8 @@ public class App implements IApplication {
     private GameplayLoopService gameplayLoopService;
     @Inject
     private SkinLibrary skinLibrary;
+    @Inject
+    private LayoutService layoutService;
     private SparkMinestom spark;
 
     public App() {
@@ -113,6 +119,7 @@ public class App implements IApplication {
         SetupGuice();
         loadSchematics();
         skinLibrary.load();
+        layoutService.load();
         LoadData();
         StartServer();
     }
@@ -255,6 +262,7 @@ public class App implements IApplication {
             commandManager.register(staffCommand);
             commandManager.register(clientsCommand);
             commandManager.register(activitiesCommand);
+            commandManager.register(slotsCommand);
 
             var sparkDirectory = Path.of(dataFolder.getPath(), "spark");
             this.spark = SparkMinestom.builder(sparkDirectory)

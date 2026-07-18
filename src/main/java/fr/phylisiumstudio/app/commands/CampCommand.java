@@ -48,6 +48,7 @@ public class CampCommand extends Command {
                         ChatMenu.button("Activités", NamedTextColor.YELLOW, "/activities", "Gérer les activités")))
                 .line(ChatMenu.row(
                         ChatMenu.button("Employés", NamedTextColor.YELLOW, "/staff", "Ressources humaines"),
+                        ChatMenu.button("Emplacements", NamedTextColor.YELLOW, "/slots", "Acquérir des emplacements"),
                         ChatMenu.button("Classement", NamedTextColor.YELLOW, "/leaderboard", "Classement mondial")))
                 .footer()
                 .send(sender);
