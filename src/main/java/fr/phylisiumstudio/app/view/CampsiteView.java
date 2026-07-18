@@ -167,7 +167,7 @@ public class CampsiteView {
         player.setRespawnPoint(PositionMapper.toMinestomPos(spawnPoint));
 
         gameClockService.start(campsite, instanceContainer);
-        this.clientsStateViews.add(new ClientView(campsite, instanceContainer));
+        this.clientsStateViews.add(new ClientView(campsite, instanceContainer, spawnPoint));
     }
 
     private void onPlayerDisconnect(PlayerDisconnectEvent event) {
@@ -186,8 +186,13 @@ public class CampsiteView {
                 return;
             }
 
-            clientsStateViews.removeIf(view ->
-                    view.getCampsite().getUniqueID().equals(campsite.getUniqueID()));
+            clientsStateViews.removeIf(view -> {
+                if (view.getCampsite().getUniqueID().equals(campsite.getUniqueID())) {
+                    view.dispose();
+                    return true;
+                }
+                return false;
+            });
 
             gameClockService.stop(campsite.getUniqueID());
 

@@ -24,6 +24,8 @@ public class StaffService {
 
     /** Tâches supplémentaires qu'un employé parfaitement compétent traite en plus de la base. */
     private static final int MAX_EXTRA_CAPACITY = 4;
+    /** Rendement financier quotidien maximal (à compétence 1) d'un employé finance. */
+    private static final double FINANCE_MAX_YIELD = 0.02;
 
     private final PlotAssignmentService assignmentService;
     private final ClientStayService stayService;
@@ -75,7 +77,7 @@ public class StaffService {
                 case RECEPTION -> welcomeClients(campsite, capacity);
                 case CLEANING -> cleanPlots(campsite, capacity);
                 case MAINTENANCE -> maintainActivities(campsite, capacity);
-                case FINANCE -> { /* ponytail: bonus financier non modélisé; ajouter si l'équilibrage l'exige */ }
+                case FINANCE -> applyFinanceYield(campsite, staff.skill(StaffRole.FINANCE));
             }
         }
     }
@@ -113,6 +115,14 @@ public class StaffService {
                 stayService.cleanPlot(plot);
                 done++;
             }
+        }
+    }
+
+    /** Rendement financier : une bonne gestion génère un revenu proportionnel au solde. */
+    private void applyFinanceYield(Campsite campsite, double skill) {
+        double yield = campsite.getMoney() * FINANCE_MAX_YIELD * Math.max(0.0, Math.min(1.0, skill));
+        if (yield > 0) {
+            campsite.addMoney(yield);
         }
     }
 

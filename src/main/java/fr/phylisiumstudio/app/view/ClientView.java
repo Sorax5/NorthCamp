@@ -1,51 +1,99 @@
 package fr.phylisiumstudio.app.view;
 
 import fr.phylisiumstudio.logic.Campsite;
+import fr.phylisiumstudio.logic.client.Client;
 import fr.phylisiumstudio.logic.client.ClientEntity;
+import fr.phylisiumstudio.logic.client.ClientLifecycle;
 import fr.phylisiumstudio.logic.client.ClientMemory;
+import fr.phylisiumstudio.logic.clock.event.PhaseChangeEvent;
 import fr.phylisiumstudio.logic.mapper.PositionMapper;
 import lombok.Getter;
+import net.minestom.server.MinecraftServer;
+import net.minestom.server.event.EventListener;
 import net.minestom.server.instance.InstanceContainer;
+import org.joml.Vector3d;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
+/**
+ * Vue responsable des entités NPC d'un camping. Synchronise dynamiquement les
+ * entités avec la liste de clients : les nouveaux arrivants apparaissent, les
+ * clients partis disparaissent, au fil de la boucle de gameplay.
+ */
 public class ClientView {
     private static final Logger logger = LoggerFactory.getLogger(ClientView.class);
 
     @Getter
     private final Campsite campsite;
-    private final List<ClientEntity> clientEntities;
+    private final InstanceContainer instance;
+    private final Vector3d receptionPoint;
+    private final Map<UUID, ClientEntity> entities = new HashMap<>();
+    private final EventListener<PhaseChangeEvent> phaseListener;
 
-    public ClientView(Campsite campsite, InstanceContainer instance) {
+    public ClientView(Campsite campsite, InstanceContainer instance, Vector3d receptionPoint) {
         this.campsite = campsite;
-        this.clientEntities = new ArrayList<>();
+        this.instance = instance;
+        this.receptionPoint = receptionPoint;
 
-        for (var client : campsite.getClients()) {
-            var memory = new ClientMemory(instance, client, campsite);
-            var entity = spawnNpc(memory);
-            clientEntities.add(entity);
-        }
+        sync();
+
+        // Re-synchronise les entités à chaque nouveau jour (arrivées/départs).
+        this.phaseListener = EventListener.of(PhaseChangeEvent.class, event -> {
+            if (event.campsite().getUniqueID().equals(campsite.getUniqueID())) {
+                sync();
+            }
+        });
+        MinecraftServer.getGlobalEventHandler().addListener(phaseListener);
     }
 
-    private ClientEntity spawnNpc(ClientMemory memory) {
-        var spawnLocation = memory.client.getPlot().getPosition();
-        var spawnPos = PositionMapper.toMinestomPos(spawnLocation);
-        var instance = memory.getInstance();
+    /** Aligne les entités présentes sur l'état courant de la liste de clients. */
+    public synchronized void sync() {
+        // Spawn des clients présents mais pas encore matérialisés.
+        for (var client : campsite.getClients()) {
+            if (client.getLifecycle() == ClientLifecycle.GONE) {
+                continue;
+            }
+            entities.computeIfAbsent(client.getUniqueID(), _ -> spawn(client));
+        }
+
+        // Despawn des clients disparus de la liste ou repartis.
+        var present = campsite.getClients().stream()
+                .filter(c -> c.getLifecycle() != ClientLifecycle.GONE)
+                .map(Client::getUniqueID)
+                .collect(java.util.stream.Collectors.toSet());
+
+        entities.entrySet().removeIf(entry -> {
+            if (present.contains(entry.getKey())) {
+                return false;
+            }
+            entry.getValue().remove();
+            return true;
+        });
+    }
+
+    private ClientEntity spawn(Client client) {
+        var memory = new ClientMemory(instance, client, campsite);
+
+        // Les clients en attente patientent à l'accueil ; les autres sur leur emplacement.
+        var location = client.getPlot() != null ? client.getPlot().getPosition() : receptionPoint;
+        var spawnPos = PositionMapper.toMinestomPos(location);
 
         var entity = new ClientEntity(memory);
         entity.setInstance(instance, spawnPos);
-
         memory.setPlayerEntity(entity);
         return entity;
     }
 
-    private void clear() {
-        for (var entity : clientEntities) {
+    /** Libère les entités et le listener ; à appeler à la fin de la session. */
+    public synchronized void dispose() {
+        MinecraftServer.getGlobalEventHandler().removeListener(phaseListener);
+        for (var entity : entities.values()) {
             entity.remove();
         }
-        clientEntities.clear();
+        entities.clear();
     }
 }

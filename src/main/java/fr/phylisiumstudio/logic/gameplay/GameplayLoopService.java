@@ -3,12 +3,14 @@ package fr.phylisiumstudio.logic.gameplay;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import fr.phylisiumstudio.logic.Campsite;
+import fr.phylisiumstudio.logic.activity.Activity;
 import fr.phylisiumstudio.logic.client.Client;
 import fr.phylisiumstudio.logic.client.ClientLifecycle;
 import fr.phylisiumstudio.logic.clock.GamePhase;
 import fr.phylisiumstudio.logic.clock.event.PhaseChangeEvent;
 import fr.phylisiumstudio.logic.economy.MarketService;
 import fr.phylisiumstudio.logic.economy.SatisfactionService;
+import fr.phylisiumstudio.logic.season.SeasonService;
 import fr.phylisiumstudio.logic.staff.StaffService;
 import net.minestom.server.MinecraftServer;
 import org.slf4j.Logger;
@@ -21,10 +23,11 @@ import java.util.Random;
  * Orchestre la boucle de gameplay quotidienne en réagissant aux transitions de
  * phase du cycle jour/nuit (pattern Observer via l'EventHandler global).
  *
- * <p>Au lever du jour : le marché fluctue, les clients partis la veille quittent
- * les lieux (impact réputation), les clients trop insatisfaits abandonnent la
- * file, les séjours avancent d'un jour (départs → emplacements sales), puis de
- * nouveaux clients arrivent — en nombre modulé par la réputation.
+ * <p>Au lever du jour : le marché fluctue, les activités s'usent, les clients
+ * partis la veille quittent les lieux (impact réputation), les clients trop
+ * insatisfaits abandonnent la file, les séjours avancent d'un jour (départs →
+ * emplacements sales), puis de nouveaux clients arrivent — en nombre modulé par
+ * la réputation et la saison. Enfin, les employés travaillent.
  */
 @Singleton
 public class GameplayLoopService {
@@ -32,11 +35,14 @@ public class GameplayLoopService {
 
     private static final int MIN_ARRIVALS = 1;
     private static final int MAX_ARRIVALS = 8;
+    /** Probabilité qu'une activité opérationnelle s'use et tombe en panne chaque jour. */
+    private static final double ACTIVITY_DEGRADE_CHANCE = 0.25;
 
     private final ClientStayService stayService;
     private final ArrivalGenerator arrivalGenerator;
     private final MarketService marketService;
     private final SatisfactionService satisfactionService;
+    private final SeasonService seasonService;
     private final StaffService staffService;
     private final Random random;
 
@@ -45,12 +51,14 @@ public class GameplayLoopService {
                                ArrivalGenerator arrivalGenerator,
                                MarketService marketService,
                                SatisfactionService satisfactionService,
+                               SeasonService seasonService,
                                StaffService staffService,
                                Random random) {
         this.stayService = stayService;
         this.arrivalGenerator = arrivalGenerator;
         this.marketService = marketService;
         this.satisfactionService = satisfactionService;
+        this.seasonService = seasonService;
         this.staffService = staffService;
         this.random = random;
 
@@ -72,6 +80,7 @@ public class GameplayLoopService {
      */
     public List<Client> openNewDay(Campsite campsite, long dayNumber) {
         marketService.fluctuate();
+        degradeActivities(campsite);
 
         // Les clients en départ la veille quittent définitivement les lieux.
         for (var client : campsite.getClients()) {
@@ -96,24 +105,36 @@ public class GameplayLoopService {
 
         var departing = stayService.advanceDay(campsite);
 
-        var arrivals = arrivalGenerator.generate(arrivalCount(campsite));
+        var arrivals = arrivalGenerator.generate(arrivalCount(campsite, dayNumber));
         campsite.getClients().addAll(arrivals);
 
         // Les employés travaillent : salaires prélevés, puis accueil/nettoyage/maintenance.
         double salaries = staffService.paySalaries(campsite);
         staffService.runAutomation(campsite);
 
-        logger.info("Day {} for campsite {}: {} departures, {} abandoned, {} new arrivals, {} salaries (reputation {})",
-                dayNumber, campsite.getUniqueID(), departing.size(), abandoned,
-                arrivals.size(), salaries, Math.round(campsite.getReputation()));
+        logger.info("Day {} ({}{}) for campsite {}: {} departures, {} abandoned, {} arrivals, {} salaries (reputation {})",
+                dayNumber, seasonService.seasonOf(dayNumber).displayName(),
+                seasonService.isSpecialEvent(dayNumber) ? " - événement spécial" : "",
+                campsite.getUniqueID(), departing.size(), abandoned, arrivals.size(),
+                salaries, Math.round(campsite.getReputation()));
         return arrivals;
     }
 
-    /** Nombre d'arrivées du jour, modulé par la réputation du camping (0–100). */
-    private int arrivalCount(Campsite campsite) {
+    /** Usure quotidienne : chaque activité opérationnelle peut tomber en panne. */
+    private void degradeActivities(Campsite campsite) {
+        for (Activity activity : campsite.getActivities()) {
+            if (activity.isOperational() && random.nextDouble() < ACTIVITY_DEGRADE_CHANCE) {
+                activity.setOperational(false);
+            }
+        }
+    }
+
+    /** Nombre d'arrivées du jour, modulé par la réputation du camping et la saison. */
+    private int arrivalCount(Campsite campsite, long dayNumber) {
         double reputationFactor = campsite.getReputation() / 100.0;
         int range = MAX_ARRIVALS - MIN_ARRIVALS;
         int scaledMax = MIN_ARRIVALS + (int) Math.round(range * reputationFactor);
-        return MIN_ARRIVALS + random.nextInt(Math.max(1, scaledMax - MIN_ARRIVALS + 1));
+        int base = MIN_ARRIVALS + random.nextInt(Math.max(1, scaledMax - MIN_ARRIVALS + 1));
+        return (int) Math.round(base * seasonService.arrivalMultiplier(dayNumber));
     }
 }
