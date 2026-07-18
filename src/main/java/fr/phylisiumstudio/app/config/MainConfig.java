@@ -12,4 +12,7 @@ public class MainConfig {
     public int DayDurationSeconds = 600;
     /** Durée réelle (secondes) d'une nuit de jeu. */
     public int NightDurationSeconds = 300;
+
+    /** Remplit automatiquement un camping neuf avec du contenu de démonstration. */
+    public boolean SeedTestCampsite = true;
 }
