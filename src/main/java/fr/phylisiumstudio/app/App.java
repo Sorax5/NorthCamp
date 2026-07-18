@@ -33,8 +33,14 @@ import fr.phylisiumstudio.logic.slot.LayoutService;
 import lombok.Getter;
 import me.lucko.spark.minestom.SparkMinestom;
 import net.hollowcube.schem.reader.SchematicReader;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import net.minestom.server.MinecraftServer;
+import net.minestom.server.event.EventNode;
+import net.minestom.server.event.server.ServerListPingEvent;
 import net.minestom.server.instance.InstanceManager;
+import net.minestom.server.ping.Status;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongepowered.configurate.yaml.NodeStyle;
@@ -263,6 +269,8 @@ public class App implements IApplication {
             commandManager.register(activitiesCommand);
             commandManager.register(slotsCommand);
 
+            registerMotd();
+
             var sparkDirectory = Path.of(dataFolder.getPath(), "spark");
             this.spark = SparkMinestom.builder(sparkDirectory)
                     .commands(true)
@@ -276,5 +284,21 @@ public class App implements IApplication {
         catch (Exception e) {
             logger.warn("Error starting server", e);
         }
+    }
+
+    /** MOTD thématique affiché dans la liste des serveurs. */
+    private void registerMotd() {
+        var node = EventNode.all("motd");
+        node.addListener(ServerListPingEvent.class, event -> {
+            var online = MinecraftServer.getConnectionManager().getOnlinePlayerCount();
+            event.setStatus(Status.builder()
+                    .description(Component.text()
+                            .append(Component.text("North Camp", NamedTextColor.GOLD, TextDecoration.BOLD))
+                            .append(Component.text(" — le tycoon de camping", NamedTextColor.GREEN))
+                            .build())
+                    .playerInfo(online, Math.max(online + 1, 100))
+                    .build());
+        });
+        MinecraftServer.getGlobalEventHandler().addChild(node);
     }
 }

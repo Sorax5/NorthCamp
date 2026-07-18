@@ -29,8 +29,8 @@ public class ActivityBuilder extends MinestomBuilder<ActivityData, Activity> {
             for (var z = min.z; z <= max.z; z++) {
                 if (x == min.x || x == max.x || z == min.z || z == max.z) {
                     var vector = new Vector3d(position).add(x, -1, z);
+                    // Un seul écrit via le batch ; le setBlock direct redondant est retiré.
                     blockbatch.setBlock(PositionMapper.toMinestomPos(vector), Block.STONE);
-                    instance.setBlock(PositionMapper.toMinestomPos(vector), Block.STONE);
                 }
             }
         }
