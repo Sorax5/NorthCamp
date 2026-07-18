@@ -28,6 +28,7 @@ public class Activity {
     private double price;
     private int maxClients;
     private ActivityType type;
+    private int currentLevel = 0;
 
     @JsonIgnore
     private List<Client> currentClients = new ArrayList<>();

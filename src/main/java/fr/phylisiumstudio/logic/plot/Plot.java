@@ -16,16 +16,19 @@ public class Plot {
     private final UUID uniqueID;
     private final PlotType plotType;
     private final Vector3d position;
+    private int level = 0;
 
     @JsonCreator
     public Plot(
             @JsonProperty("uniqueID") UUID uniqueID,
             @JsonProperty("position") Vector3d position,
-            @JsonProperty("plotType") PlotType plotType
+            @JsonProperty("plotType") PlotType plotType,
+            @JsonProperty("level") int level
     ) {
         this.uniqueID = uniqueID;
         this.position = position;
         this.plotType = plotType;
+        this.level = level;
     }
 
     public Plot(Vector3d position, PlotType plotType) {

@@ -1,7 +1,6 @@
 package fr.phylisiumstudio.logic;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIdentityReference;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import fr.phylisiumstudio.logic.activity.Activity;
 import fr.phylisiumstudio.logic.client.Client;
