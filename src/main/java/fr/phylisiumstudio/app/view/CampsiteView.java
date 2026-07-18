@@ -12,6 +12,7 @@ import fr.phylisiumstudio.logic.service.CampsiteService;
 import fr.phylisiumstudio.logic.service.InstanceService;
 import fr.phylisiumstudio.logic.skin.SkinLibrary;
 import fr.phylisiumstudio.logic.slot.LayoutService;
+import fr.phylisiumstudio.logic.staff.StaffBrain;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.entity.GameMode;
 import net.minestom.server.event.EventNode;
@@ -44,6 +45,7 @@ public class CampsiteView {
     private final SkinLibrary skinLibrary;
     private final MarkerRegistry markerRegistry;
     private final LayoutService layoutService;
+    private final StaffBrain staffBrain;
     private final Random random;
     private final boolean seedTestCampsite;
 
@@ -55,6 +57,7 @@ public class CampsiteView {
                         SkinLibrary skinLibrary,
                         MarkerRegistry markerRegistry,
                         LayoutService layoutService,
+                        StaffBrain staffBrain,
                         Random random,
                         App app) {
         this.clientsStateViews = new CopyOnWriteArrayList<>();
@@ -67,6 +70,7 @@ public class CampsiteView {
         this.skinLibrary = skinLibrary;
         this.markerRegistry = markerRegistry;
         this.layoutService = layoutService;
+        this.staffBrain = staffBrain;
         this.random = random;
         var config = app.getMainConfig();
         this.seedTestCampsite = config == null || config.SeedTestCampsite;
@@ -108,7 +112,7 @@ public class CampsiteView {
         var reception = layoutService.receptionPosition();
         var exit = layoutService.exitPosition();
         this.clientsStateViews.add(new ClientView(campsite, instanceContainer, reception, exit, skinLibrary, random));
-        this.staffViews.add(new StaffView(campsite, instanceContainer, new Vector3d(STAFF_ORIGIN), reception, skinLibrary));
+        this.staffViews.add(new StaffView(campsite, instanceContainer, new Vector3d(STAFF_ORIGIN), reception, skinLibrary, staffBrain));
         this.placeInfoViews.add(new PlaceInfoView(campsite, instanceContainer, markerRegistry, layoutService));
     }
 
