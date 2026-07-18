@@ -21,6 +21,9 @@ public final class MarkerTags {
     /** Comptoir d'accueil où patientent les clients. */
     public static final String RECEPTION = "reception";
 
+    /** Emplacement du panneau d'information (text display) du lieu. */
+    public static final String INFO = "info";
+
     // ── Activités ───────────────────────────────────────────────────────────
     /** Point où le client se rend pour pratiquer l'activité. */
     public static final String ACTIVITY_TARGET = "activity_target";

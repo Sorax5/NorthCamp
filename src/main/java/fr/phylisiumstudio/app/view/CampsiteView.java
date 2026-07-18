@@ -6,6 +6,7 @@ import fr.phylisiumstudio.app.App;
 import fr.phylisiumstudio.logic.Campsite;
 import fr.phylisiumstudio.logic.clock.GameClockService;
 import fr.phylisiumstudio.logic.mapper.PositionMapper;
+import fr.phylisiumstudio.logic.marker.MarkerRegistry;
 import fr.phylisiumstudio.logic.seed.CampsiteSeeder;
 import fr.phylisiumstudio.logic.service.CampsiteService;
 import fr.phylisiumstudio.logic.service.InstanceService;
@@ -34,11 +35,13 @@ public class CampsiteView {
 
     private final List<ClientView> clientsStateViews;
     private final List<StaffView> staffViews;
+    private final List<PlaceInfoView> placeInfoViews;
     private final CampsiteService campsiteService;
     private final InstanceService instanceService;
     private final GameClockService gameClockService;
     private final CampsiteSeeder campsiteSeeder;
     private final SkinLibrary skinLibrary;
+    private final MarkerRegistry markerRegistry;
     private final Random random;
     private final boolean seedTestCampsite;
 
@@ -48,15 +51,18 @@ public class CampsiteView {
                         GameClockService gameClockService,
                         CampsiteSeeder campsiteSeeder,
                         SkinLibrary skinLibrary,
+                        MarkerRegistry markerRegistry,
                         Random random,
                         App app) {
         this.clientsStateViews = new CopyOnWriteArrayList<>();
         this.staffViews = new CopyOnWriteArrayList<>();
+        this.placeInfoViews = new CopyOnWriteArrayList<>();
         this.campsiteService = campsiteService;
         this.instanceService = instanceService;
         this.gameClockService = gameClockService;
         this.campsiteSeeder = campsiteSeeder;
         this.skinLibrary = skinLibrary;
+        this.markerRegistry = markerRegistry;
         this.random = random;
         var config = app.getMainConfig();
         this.seedTestCampsite = config == null || config.SeedTestCampsite;
@@ -97,6 +103,7 @@ public class CampsiteView {
         gameClockService.start(campsite, instanceContainer);
         this.clientsStateViews.add(new ClientView(campsite, instanceContainer, spawnPoint, skinLibrary, random));
         this.staffViews.add(new StaffView(campsite, instanceContainer, new Vector3d(STAFF_ORIGIN), skinLibrary));
+        this.placeInfoViews.add(new PlaceInfoView(campsite, instanceContainer, markerRegistry));
     }
 
     private void onPlayerDisconnect(PlayerDisconnectEvent event) {
@@ -124,6 +131,14 @@ public class CampsiteView {
             });
 
             staffViews.removeIf(view -> {
+                if (view.getCampsite().getUniqueID().equals(campsite.getUniqueID())) {
+                    view.dispose();
+                    return true;
+                }
+                return false;
+            });
+
+            placeInfoViews.removeIf(view -> {
                 if (view.getCampsite().getUniqueID().equals(campsite.getUniqueID())) {
                     view.dispose();
                     return true;
