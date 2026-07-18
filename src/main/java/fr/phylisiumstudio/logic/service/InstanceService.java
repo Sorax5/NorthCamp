@@ -20,13 +20,15 @@ import java.util.concurrent.ConcurrentHashMap;
 public class InstanceService {
     private static final Logger logger = LoggerFactory.getLogger(InstanceService.class);
 
+    /** Marge de chunks autour des éléments pour couvrir les schématics à cheval. */
+    private static final int CHUNK_MARGIN = 2;
+
     private final InstanceManager instanceManager;
     private final CampsiteBuilderService campsiteBuilderService;
     private final int chunkRadius;
+    private final File templateFolder;
 
     private final ConcurrentHashMap<UUID, CompletableFuture<InstanceContainer>> instances = new ConcurrentHashMap<>();
-
-    private final File templateFolder;
 
     @Inject
     public InstanceService(InstanceManager instanceManager, App app, CampsiteBuilderService campsiteBuilderService) {
@@ -50,87 +52,51 @@ public class InstanceService {
         return getInstanceAsync(campsite).join();
     }
 
+    /**
+     * Construit l'instance de façon entièrement asynchrone : préparation du conteneur,
+     * chargement des chunks, éclairage, puis pose des schématics — chaque étape chaînée
+     * sans blocage de thread ({@code join}) pour préserver les TPS.
+     */
     private CompletableFuture<InstanceContainer> createInstanceAsync(Campsite campsite) {
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                var instanceContainer = instanceManager.createInstanceContainer();
-                // Chargement depuis le world template partagé (lecture seule)
-                var loader = new AnvilLoader(templateFolder.toPath());
-                instanceContainer.setChunkLoader(loader);
-                instanceContainer.setChunkSupplier(LightingChunk::new);
+        var start = Instant.now();
+        var container = prepareContainer();
+        var range = ChunkRange.forCampsite(campsite, CHUNK_MARGIN, chunkRadius);
 
-                var now = Instant.now();
+        return loadChunks(container, range)
+                .thenRun(() -> {
+                    LightingChunk.relight(container, container.getChunks());
+                    logger.info("Loaded {} chunks in {} ms for campsite {}",
+                            range.count(), Duration.between(start, Instant.now()).toMillis(), campsite.getUniqueID());
+                })
+                .thenCompose(_ -> campsiteBuilderService.BuildCampsiteAsync(campsite, container))
+                .thenApply(_ -> {
+                    logger.info("Instance ready for campsite {}", campsite.getUniqueID());
+                    return container;
+                })
+                .exceptionally(ex -> {
+                    instances.remove(campsite.getUniqueID());
+                    logger.error("Failed to create instance for campsite {}: {}",
+                            campsite.getUniqueID(), ex.getMessage(), ex);
+                    throw new RuntimeException(ex);
+                });
+    }
 
-                // Compute chunk range to load. Prefer dynamic range based on campsite plots/activities
-                int marginChunks = 2; // small margin to ensure schematics spanning multiple chunks are covered
-                Integer minChunkX = null, maxChunkX = null, minChunkZ = null, maxChunkZ = null;
+    private InstanceContainer prepareContainer() {
+        var container = instanceManager.createInstanceContainer();
+        // World template partagé en lecture seule
+        container.setChunkLoader(new AnvilLoader(templateFolder.toPath()));
+        container.setChunkSupplier(LightingChunk::new);
+        return container;
+    }
 
-                // Inspect plot positions
-                if (campsite != null) {
-                    var plots = campsite.getPlots();
-                    for (int i = 0; i < plots.size(); i++) {
-                        var plot = plots.get(i);
-                        var pos = plot.getPosition();
-                        int cx = (int) Math.floor(pos.x() / 16.0);
-                        int cz = (int) Math.floor(pos.z() / 16.0);
-                        if (minChunkX == null || cx < minChunkX) minChunkX = cx;
-                        if (maxChunkX == null || cx > maxChunkX) maxChunkX = cx;
-                        if (minChunkZ == null || cz < minChunkZ) minChunkZ = cz;
-                        if (maxChunkZ == null || cz > maxChunkZ) maxChunkZ = cz;
-                    }
-
-                    var activities = campsite.getActivities();
-                    for (int i = 0; i < activities.size(); i++) {
-                        var activity = activities.get(i);
-                        var pos = activity.getPosition();
-                        int cx = (int) Math.floor(pos.x() / 16.0);
-                        int cz = (int) Math.floor(pos.z() / 16.0);
-                        if (minChunkX == null || cx < minChunkX) minChunkX = cx;
-                        if (maxChunkX == null || cx > maxChunkX) maxChunkX = cx;
-                        if (minChunkZ == null || cz < minChunkZ) minChunkZ = cz;
-                        if (maxChunkZ == null || cz > maxChunkZ) maxChunkZ = cz;
-                    }
-                }
-
-                var futures = new ArrayList<CompletableFuture<Chunk>>();
-
-                if (minChunkX == null) {
-                    // fallback: load a square area centered on 0 as before
-                    var halfRadius = chunkRadius / 2;
-                    for (var x = -halfRadius; x <= halfRadius; x++) {
-                        for (var z = -halfRadius; z <= halfRadius; z++) {
-                            futures.add(instanceContainer.loadChunk(x, z));
-                        }
-                    }
-                } else {
-                    int fromX = minChunkX - marginChunks;
-                    int toX = maxChunkX + marginChunks;
-                    int fromZ = minChunkZ - marginChunks;
-                    int toZ = maxChunkZ + marginChunks;
-
-                    for (int x = fromX; x <= toX; x++) {
-                        for (int z = fromZ; z <= toZ; z++) {
-                            futures.add(instanceContainer.loadChunk(x, z));
-                        }
-                    }
-                }
-
-                CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-                LightingChunk.relight(instanceContainer, instanceContainer.getChunks());
-
-                var duration = Duration.between(now, Instant.now());
-                logger.info("Loaded {} chunks in {} ms for campsite {}", futures.size(), duration.toMillis(), campsite.getUniqueID());
-
-                campsiteBuilderService.BuildCampsiteAsync(campsite, instanceContainer).join();
-
-                logger.info("Instance ready for campsite {}", campsite.getUniqueID());
-                return instanceContainer;
-            } catch (Exception e) {
-                instances.remove(campsite.getUniqueID());
-                logger.error("Failed to create instance for campsite {}: {}", campsite.getUniqueID(), e.getMessage(), e);
-                throw new RuntimeException(e);
+    private CompletableFuture<Void> loadChunks(InstanceContainer container, ChunkRange range) {
+        var futures = new ArrayList<CompletableFuture<Chunk>>(range.count());
+        for (int x = range.fromX(); x <= range.toX(); x++) {
+            for (int z = range.fromZ(); z <= range.toZ(); z++) {
+                futures.add(container.loadChunk(x, z));
             }
-        });
+        }
+        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
     }
 
     public boolean isLinked(Campsite campsite, Instance instance) {
