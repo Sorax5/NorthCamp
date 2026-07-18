@@ -8,9 +8,9 @@ import fr.phylisiumstudio.logic.plot.Plot;
 import fr.phylisiumstudio.logic.staff.Staff;
 import lombok.Getter;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 @Getter
 public class Campsite {
@@ -33,10 +33,10 @@ public class Campsite {
     public Campsite(UUID ownerID) {
         this.uniqueID = UUID.randomUUID();
         this.ownerID = ownerID;
-        this.activities = new ArrayList<>();
-        this.plots = new ArrayList<>();
-        this.clients = new ArrayList<>();
-        this.staff = new ArrayList<>();
+        this.activities = new CopyOnWriteArrayList<>();
+        this.plots = new CopyOnWriteArrayList<>();
+        this.clients = new CopyOnWriteArrayList<>();
+        this.staff = new CopyOnWriteArrayList<>();
     }
 
     @JsonCreator
@@ -52,10 +52,10 @@ public class Campsite {
     ) {
         this.uniqueID = uniqueID;
         this.ownerID = ownerID;
-        this.activities = activities != null ? new ArrayList<>(activities) : new ArrayList<>();
-        this.plots = plots != null ? new ArrayList<>(plots) : new ArrayList<>();
-        this.clients = clients != null ? new ArrayList<>(clients) : new ArrayList<>();
-        this.staff = staff != null ? new ArrayList<>(staff) : new ArrayList<>();
+        this.activities = new CopyOnWriteArrayList<>(activities != null ? activities : List.of());
+        this.plots = new CopyOnWriteArrayList<>(plots != null ? plots : List.of());
+        this.clients = new CopyOnWriteArrayList<>(clients != null ? clients : List.of());
+        this.staff = new CopyOnWriteArrayList<>(staff != null ? staff : List.of());
         this.money = money;
         this.reputation = reputation;
     }
