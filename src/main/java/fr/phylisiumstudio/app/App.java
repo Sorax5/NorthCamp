@@ -69,6 +69,8 @@ public class App implements IApplication {
 
     @Inject
     private MoneyCommand moneyCommand;
+    @Inject
+    private fr.phylisiumstudio.app.commands.LeaderboardCommand leaderboardCommand;
 
     @Inject
     private CampsiteView campsiteView;
@@ -225,6 +227,7 @@ public class App implements IApplication {
 
             MinecraftServer.getCommandManager().register(new ShutdownCommand());
             MinecraftServer.getCommandManager().register(moneyCommand);
+            MinecraftServer.getCommandManager().register(leaderboardCommand);
 
             var sparkDirectory = Path.of(dataFolder.getPath(), "spark");
             this.spark = SparkMinestom.builder(sparkDirectory)
