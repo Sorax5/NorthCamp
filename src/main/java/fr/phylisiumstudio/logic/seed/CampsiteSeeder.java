@@ -6,12 +6,10 @@ import fr.phylisiumstudio.logic.Campsite;
 import fr.phylisiumstudio.logic.activity.Activity;
 import fr.phylisiumstudio.logic.activity.ActivityType;
 import fr.phylisiumstudio.logic.client.Client;
-import fr.phylisiumstudio.logic.client.ClientLifecycle;
 import fr.phylisiumstudio.logic.economy.MarketService;
 import fr.phylisiumstudio.logic.plot.Plot;
 import fr.phylisiumstudio.logic.plot.PlotType;
 import fr.phylisiumstudio.logic.service.PlotDataService;
-import fr.phylisiumstudio.logic.staff.Staff;
 import fr.phylisiumstudio.logic.staff.StaffFactory;
 import fr.phylisiumstudio.logic.staff.StaffRole;
 import org.joml.Vector3d;
@@ -29,7 +27,7 @@ public class CampsiteSeeder {
 
     private static final Vector3d PLOT_ORIGIN = new Vector3d(0, 69, 0);
     private static final Vector3d ACTIVITY_ORIGIN = new Vector3d(0, 69, -20);
-    private static final int PLOTS_PER_TYPE = 6;
+    private static final int PLOTS_PER_TYPE = 4;
     private static final int PLOT_SPACING = 12;
     private static final int ACTIVITY_SPACING = 12;
     private static final double STARTING_MONEY = 2_000.0;
@@ -89,29 +87,25 @@ public class CampsiteSeeder {
     }
 
     private void seedClients(Campsite campsite) {
-        // Quatre clients installés sur les premiers emplacements.
-        var plots = campsite.getPlots();
-        for (int i = 0; i < 4 && i < plots.size(); i++) {
-            var client = new Client(1, 3, 250);
-            client.setPlot(plots.get(i));
-            client.setLifecycle(ClientLifecycle.STAYING);
-            campsite.addClient(client);
-        }
-
-        // File d'attente : deux clients seuls et deux familles.
+        // Tous les emplacements démarrent vides : c'est la file d'attente et les
+        // employés qui remplissent le camping au fil de la simulation.
         campsite.addClient(new Client(1, 2, 150));
         campsite.addClient(new Client(1, 4, 320));
+        campsite.addClient(new Client(2, 3, 450));
         campsite.addClient(new Client(3, 3, 600));
         campsite.addClient(new Client(4, 2, 700));
+        campsite.addClient(new Client(1, 5, 400));
     }
 
     private void seedStaff(Campsite campsite) {
-        Staff receptionist = staffFactory.generateCandidate();
-        receptionist.setAssignedRole(StaffRole.RECEPTION);
-        campsite.addStaff(receptionist);
+        hire(campsite, StaffRole.RECEPTION);
+        hire(campsite, StaffRole.CLEANING);
+        hire(campsite, StaffRole.MAINTENANCE);
+    }
 
-        Staff cleaner = staffFactory.generateCandidate();
-        cleaner.setAssignedRole(StaffRole.CLEANING);
-        campsite.addStaff(cleaner);
+    private void hire(Campsite campsite, StaffRole role) {
+        var staff = staffFactory.generateCandidate();
+        staff.setAssignedRole(role);
+        campsite.addStaff(staff);
     }
 }
