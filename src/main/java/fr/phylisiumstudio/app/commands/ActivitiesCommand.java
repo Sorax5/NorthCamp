@@ -13,6 +13,7 @@ import net.minestom.server.command.builder.Command;
 import net.minestom.server.command.builder.arguments.ArgumentType;
 
 import java.util.UUID;
+import java.util.function.Consumer;
 
 /**
  * {@code /activities} : gestion des activités. Prix, disponibilité et remise en
@@ -43,7 +44,7 @@ public class ActivitiesCommand extends Command {
         }), ArgumentType.Literal("price"), idArg, amountArg);
     }
 
-    private void withActivity(CommandSender sender, UUID activityId, java.util.function.Consumer<Activity> action) {
+    private void withActivity(CommandSender sender, UUID activityId, Consumer<Activity> action) {
         var campsite = CampsiteResolver.resolve(sender, campsiteService);
         if (campsite == null) return;
         campsite.getActivities().stream()

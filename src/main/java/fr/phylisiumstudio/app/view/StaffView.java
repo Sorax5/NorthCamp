@@ -15,6 +15,7 @@ import org.joml.Vector3d;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Vue des entités employés d'un camping. Aligne les NPC employés le long de la
@@ -55,7 +56,7 @@ public class StaffView {
         }
 
         var present = campsite.getStaff().stream().map(Staff::getUniqueId)
-                .collect(java.util.stream.Collectors.toSet());
+                .collect(Collectors.toSet());
         entities.entrySet().removeIf(entry -> {
             if (present.contains(entry.getKey())) {
                 return false;

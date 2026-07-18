@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 /**
  * Génère des candidats employés (pattern Factory). Chaque candidat a une
@@ -51,7 +52,7 @@ public class StaffFactory {
     }
 
     public List<Staff> generateCandidates(int count) {
-        return java.util.stream.Stream.generate(this::generateCandidate)
+        return Stream.generate(this::generateCandidate)
                 .limit(Math.max(0, count))
                 .toList();
     }

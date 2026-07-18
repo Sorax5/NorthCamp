@@ -16,6 +16,7 @@ import net.minestom.server.command.builder.Command;
 import net.minestom.server.command.builder.arguments.ArgumentType;
 
 import java.util.UUID;
+import java.util.function.Consumer;
 
 /**
  * {@code /staff} : gestion des ressources humaines. Recrutement de candidats,
@@ -60,7 +61,7 @@ public class StaffCommand extends Command {
         }), ArgumentType.Literal("refresh"));
     }
 
-    private void withCampsite(CommandSender sender, java.util.function.Consumer<Campsite> action) {
+    private void withCampsite(CommandSender sender, Consumer<Campsite> action) {
         var campsite = CampsiteResolver.resolve(sender, campsiteService);
         if (campsite != null) {
             action.accept(campsite);
