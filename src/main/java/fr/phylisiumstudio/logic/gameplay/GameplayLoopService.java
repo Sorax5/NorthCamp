@@ -9,6 +9,7 @@ import fr.phylisiumstudio.logic.clock.GamePhase;
 import fr.phylisiumstudio.logic.clock.event.PhaseChangeEvent;
 import fr.phylisiumstudio.logic.economy.MarketService;
 import fr.phylisiumstudio.logic.economy.SatisfactionService;
+import fr.phylisiumstudio.logic.staff.StaffService;
 import net.minestom.server.MinecraftServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +37,7 @@ public class GameplayLoopService {
     private final ArrivalGenerator arrivalGenerator;
     private final MarketService marketService;
     private final SatisfactionService satisfactionService;
+    private final StaffService staffService;
     private final Random random;
 
     @Inject
@@ -43,11 +45,13 @@ public class GameplayLoopService {
                                ArrivalGenerator arrivalGenerator,
                                MarketService marketService,
                                SatisfactionService satisfactionService,
+                               StaffService staffService,
                                Random random) {
         this.stayService = stayService;
         this.arrivalGenerator = arrivalGenerator;
         this.marketService = marketService;
         this.satisfactionService = satisfactionService;
+        this.staffService = staffService;
         this.random = random;
 
         MinecraftServer.getGlobalEventHandler()
@@ -95,9 +99,13 @@ public class GameplayLoopService {
         var arrivals = arrivalGenerator.generate(arrivalCount(campsite));
         campsite.getClients().addAll(arrivals);
 
-        logger.info("Day {} for campsite {}: {} departures, {} abandoned, {} new arrivals (reputation {})",
+        // Les employés travaillent : salaires prélevés, puis accueil/nettoyage/maintenance.
+        double salaries = staffService.paySalaries(campsite);
+        staffService.runAutomation(campsite);
+
+        logger.info("Day {} for campsite {}: {} departures, {} abandoned, {} new arrivals, {} salaries (reputation {})",
                 dayNumber, campsite.getUniqueID(), departing.size(), abandoned,
-                arrivals.size(), Math.round(campsite.getReputation()));
+                arrivals.size(), salaries, Math.round(campsite.getReputation()));
         return arrivals;
     }
 
