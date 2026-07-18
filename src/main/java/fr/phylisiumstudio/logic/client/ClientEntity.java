@@ -25,15 +25,18 @@ public class ClientEntity extends EntityCreature {
     private final BehaviorTree<ClientEntity> behaviorTree;
 
     public ClientEntity(ClientMemory memory) {
+        this(memory, null);
+    }
+
+    public ClientEntity(ClientMemory memory, PlayerSkin skin) {
         super(EntityType.MANNEQUIN);
 
         editEntityMeta(MannequinMeta.class, meta -> {
             meta.setNotifyAboutChanges(false);
 
-            /*var skin = PlayerSkin.fromUsername("SoraxDubbing");
-            assert skin != null : "Le skin du client n'a pas pu être chargé.";
-            var profile = new ResolvableProfile(skin);
-            meta.setProfile(profile);*/
+            if (skin != null) {
+                meta.setProfile(new ResolvableProfile(skin));
+            }
 
             meta.setCustomNameVisible(true);
 
