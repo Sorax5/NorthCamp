@@ -1,0 +1,42 @@
+[versions]
+minestom = "2026.03.03-1.21.11"
+maestro = "-SNAPSHOT"
+logback = "1.5.18"
+configurate = "4.2.0"
+guice = "7.0.0"
+guava = "33.5.0-jre"
+joml = "1.10.8"
+schem = "2.0.1"
+gdx-ai = "1.8.2"
+lombok = "1.18.42"
+jackson = "2.18.2"
+spark = "1.10-SNAPSHOT"
+junit = "5.11.4"
+
+[libraries]
+minestom = { module = "net.minestom:minestom", version.ref = "minestom" }
+maestro = { module = "com.github.Sorax5:Maestro", version.ref = "maestro" }
+logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
+configurate-yaml = { module = "org.spongepowered:configurate-yaml", version.ref = "configurate" }
+guice = { module = "com.google.inject:guice", version.ref = "guice" }
+guava = { module = "com.google.guava:guava", version.ref = "guava" }
+joml = { module = "org.joml:joml", version.ref = "joml" }
+schem = { module = "dev.hollowcube:schem", version.ref = "schem" }
+gdx-ai = { module = "com.badlogicgames.gdx:gdx-ai", version.ref = "gdx-ai" }
+lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
+spark-minestom = { module = "dev.lu15:spark-minestom", version.ref = "spark" }
+
+jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
+jackson-yaml = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml", version.ref = "jackson" }
+jackson-jsr310 = { module = "com.fasterxml.jackson.datatype:jackson-datatype-jsr310", version.ref = "jackson" }
+jackson-jdk8 = { module = "com.fasterxml.jackson.datatype:jackson-datatype-jdk8", version.ref = "jackson" }
+
+junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+
+[bundles]
+jackson = ["jackson-databind", "jackson-yaml", "jackson-jsr310", "jackson-jdk8"]
+
+[plugins]
+shadow = { id = "com.gradleup.shadow", version = "8.3.0" }

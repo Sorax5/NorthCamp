@@ -1,6 +1,6 @@
 plugins {
     id 'java'
-    id 'com.gradleup.shadow' version "8.3.0"
+    alias(libs.plugins.shadow)
 }
 
 group = 'fr.phylisiumstudio'
@@ -9,81 +9,72 @@ version = '1.0-SNAPSHOT'
 repositories {
     mavenCentral()
     maven { url 'https://jitpack.io' }
-    maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
-    maven { url "https://oss.sonatype.org/content/repositories/releases/" }
-
-    maven { url "https://repo.hypera.dev/snapshots/" } // spark-minestom
-    maven { url "https://repo.lucko.me/" } // spark-common
+    maven { url 'https://oss.sonatype.org/content/repositories/snapshots/' }
+    maven { url 'https://oss.sonatype.org/content/repositories/releases/' }
+    maven { url 'https://repo.hypera.dev/snapshots/' } // spark-minestom
+    maven { url 'https://repo.lucko.me/' }             // spark-common
 }
 
 dependencies {
-    implementation 'net.minestom:minestom:2026.03.03-1.21.11'
-    implementation 'com.github.Sorax5:Maestro:-SNAPSHOT'
-    implementation 'ch.qos.logback:logback-classic:1.5.18'
-    implementation 'org.spongepowered:configurate-yaml:4.2.0'
-    implementation 'com.google.inject:guice:7.0.0'
-    implementation 'com.google.guava:guava:33.5.0-jre'
-    implementation group: 'org.joml', name: 'joml', version: '1.10.8'
-    implementation 'dev.hollowcube:schem:2.0.1'
+    implementation libs.minestom
+    implementation libs.maestro
+    implementation libs.logback.classic
+    implementation libs.configurate.yaml
+    implementation libs.guice
+    implementation libs.guava
+    implementation libs.joml
+    implementation libs.schem
+    implementation libs.gdx.ai
+    implementation libs.spark.minestom
+    implementation libs.bundles.jackson
 
-    implementation "com.badlogicgames.gdx:gdx-ai:1.8.2"
+    compileOnly libs.lombok
+    annotationProcessor libs.lombok
+    testCompileOnly libs.lombok
+    testAnnotationProcessor libs.lombok
 
-    compileOnly("org.projectlombok:lombok:1.18.42")
-    annotationProcessor("org.projectlombok:lombok:1.18.42")
-
-    testCompileOnly("org.projectlombok:lombok:1.18.42")
-    testAnnotationProcessor("org.projectlombok:lombok:1.18.42")
-
-    testImplementation platform('org.junit:junit-bom:5.10.0')
-    testImplementation 'org.junit.jupiter:junit-jupiter'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.2'
-    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.18.2'
-    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.18.2'
-    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.18.2'
-
-    implementation("dev.lu15:spark-minestom:1.10-SNAPSHOT")
-}
-
-test {
-    useJUnitPlatform()
+    testImplementation platform(libs.junit.bom)
+    testImplementation libs.junit.jupiter
+    testRuntimeOnly libs.junit.platform.launcher
 }
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(25))
+        languageVersion = JavaLanguageVersion.of(25)
     }
 }
+
+// Options JVM communes (accès natif + interop bas niveau requis par Minestom).
+def sharedJvmArgs = [
+        '--add-opens', 'java.base/sun.misc=ALL-UNNAMED',
+        '--add-opens', 'java.base/java.lang=ALL-UNNAMED',
+        '--enable-native-access=ALL-UNNAMED',
+        '--sun-misc-unsafe-memory-access=allow'
+]
 
 tasks.withType(JavaExec).configureEach {
-    jvmArgs '--add-opens', 'java.base/sun.misc=ALL-UNNAMED',
-            '--add-opens', 'java.base/java.lang=ALL-UNNAMED',
-            '--enable-native-access=ALL-UNNAMED',
-            '--sun-misc-unsafe-memory-access=allow'
+    jvmArgs sharedJvmArgs
 }
 
-tasks {
-    jar {
-        manifest {
-            attributes["Main-Class"] = "fr.phylisiumstudio.Main"
-            attributes["Add-Opens"] = "java.base/sun.misc java.base/java.lang"
-        }
-    }
+tasks.named('test', Test) {
+    useJUnitPlatform()
+    jvmArgs sharedJvmArgs
+}
 
-    test {
-        jvmArgs '--add-opens', 'java.base/sun.misc=ALL-UNNAMED',
-                '--add-opens', 'java.base/java.lang=ALL-UNNAMED',
-                '--enable-native-access=ALL-UNNAMED',
-                '--sun-misc-unsafe-memory-access=allow'
+tasks.named('jar', Jar) {
+    manifest {
+        attributes(
+                'Main-Class': 'fr.phylisiumstudio.Main',
+                'Add-Opens': 'java.base/sun.misc java.base/java.lang'
+        )
     }
+}
 
-    build {
-        dependsOn(shadowJar)
-    }
+tasks.named('shadowJar') {
+    mergeServiceFiles()
+    archiveClassifier.set('')
+}
 
-    shadowJar {
-        mergeServiceFiles()
-        archiveClassifier.set("")
-    }
+tasks.named('build') {
+    dependsOn tasks.named('shadowJar')
 }
