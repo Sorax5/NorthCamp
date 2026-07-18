@@ -7,7 +7,6 @@ import fr.phylisiumstudio.logic.skin.SkinLibrary;
 import fr.phylisiumstudio.logic.staff.Staff;
 import fr.phylisiumstudio.logic.staff.StaffEntity;
 import lombok.Getter;
-import net.minestom.server.MinecraftServer;
 import net.minestom.server.event.EventListener;
 import net.minestom.server.instance.InstanceContainer;
 import org.joml.Vector3d;
@@ -39,12 +38,9 @@ public class StaffView {
 
         sync();
 
-        this.phaseListener = EventListener.of(PhaseChangeEvent.class, event -> {
-            if (event.campsite().getUniqueID().equals(campsite.getUniqueID())) {
-                sync();
-            }
-        });
-        MinecraftServer.getGlobalEventHandler().addListener(phaseListener);
+        // Abonné au nœud de l'instance : seul ce camping est concerné, nettoyage auto.
+        this.phaseListener = EventListener.of(PhaseChangeEvent.class, event -> sync());
+        instance.eventNode().addListener(phaseListener);
     }
 
     /** Aligne les entités employés sur l'effectif courant. */
@@ -80,7 +76,7 @@ public class StaffView {
     }
 
     public synchronized void dispose() {
-        MinecraftServer.getGlobalEventHandler().removeListener(phaseListener);
+        instance.eventNode().removeListener(phaseListener);
         for (var entity : entities.values()) {
             despawn(entity);
         }

@@ -13,6 +13,7 @@ import fr.phylisiumstudio.logic.economy.SatisfactionService;
 import fr.phylisiumstudio.logic.season.SeasonService;
 import fr.phylisiumstudio.logic.staff.StaffService;
 import net.minestom.server.MinecraftServer;
+import net.minestom.server.event.EventNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,8 +63,11 @@ public class GameplayLoopService {
         this.staffService = staffService;
         this.random = random;
 
-        MinecraftServer.getGlobalEventHandler()
-                .addListener(PhaseChangeEvent.class, this::onPhaseChange);
+        // Nœud dédié attaché à la racine : regroupe la logique de la boucle et
+        // reflète la structure du serveur plutôt que d'empiler sur le handler global.
+        var node = EventNode.all("gameplay-loop");
+        node.addListener(PhaseChangeEvent.class, this::onPhaseChange);
+        MinecraftServer.getGlobalEventHandler().addChild(node);
     }
 
     private void onPhaseChange(PhaseChangeEvent event) {

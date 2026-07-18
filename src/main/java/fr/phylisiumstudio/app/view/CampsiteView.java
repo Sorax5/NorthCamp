@@ -11,6 +11,7 @@ import fr.phylisiumstudio.logic.service.CampsiteService;
 import fr.phylisiumstudio.logic.service.InstanceService;
 import fr.phylisiumstudio.logic.skin.SkinLibrary;
 import net.minestom.server.MinecraftServer;
+import net.minestom.server.event.EventNode;
 import net.minestom.server.event.player.AsyncPlayerConfigurationEvent;
 import net.minestom.server.event.player.PlayerDisconnectEvent;
 import net.minestom.server.event.player.PlayerSpawnEvent;
@@ -59,13 +60,12 @@ public class CampsiteView {
         var config = app.getMainConfig();
         this.seedTestCampsite = config == null || config.SeedTestCampsite;
 
-        var eventHandler = MinecraftServer.getGlobalEventHandler();
-        eventHandler.addListener(AsyncPlayerConfigurationEvent.class, this::addCamping);
-        eventHandler.addListener(PlayerDisconnectEvent.class, this::onPlayerDisconnect);
-        eventHandler.addListener(PlayerSpawnEvent.class, event -> {
-            var player = event.getPlayer();
-            player.setAllowFlying(true);
-        });
+        // Nœud dédié au cycle de vie joueur ↔ camping, attaché à la racine.
+        var node = EventNode.all("campsite-view");
+        node.addListener(AsyncPlayerConfigurationEvent.class, this::addCamping);
+        node.addListener(PlayerDisconnectEvent.class, this::onPlayerDisconnect);
+        node.addListener(PlayerSpawnEvent.class, event -> event.getPlayer().setAllowFlying(true));
+        MinecraftServer.getGlobalEventHandler().addChild(node);
     }
 
     public void addCamping(AsyncPlayerConfigurationEvent event) {
