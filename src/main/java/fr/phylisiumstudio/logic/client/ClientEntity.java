@@ -44,7 +44,7 @@ public class ClientEntity extends EntityCreature {
         });
 
         AttributeInstance speed = this.getAttribute(Attribute.MOVEMENT_SPEED);
-        speed.setBaseValue(0.1);
+        speed.setBaseValue(0.25);
 
         this.setAutoViewEntities(true);
 
@@ -55,12 +55,20 @@ public class ClientEntity extends EntityCreature {
     @Override
     public void tick(long time) {
         super.tick(time);
-        behaviorTree.step();
+        // Isole l'IA : une tâche qui lève une exception ne doit pas figer le NPC
+        // ni interrompre le tick du reste du monde.
+        try {
+            behaviorTree.step();
+        } catch (Exception e) {
+            logger.warn("Behavior tree step failed for client entity {}", getUuid(), e);
+        }
     }
 
     public void setCurrentAction(String action) {
+        var state = memory.getClient().getAction();
+        var stateName = state != null ? state.toString() : "?";
         var txt = Component.text()
-                .append(Component.text(memory.getClient().getAction().toString(), NamedTextColor.GREEN))
+                .append(Component.text(stateName, NamedTextColor.GREEN))
                 .append(Component.text(" - "))
                 .append(Component.text(action, NamedTextColor.YELLOW))
                 .build();
