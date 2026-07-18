@@ -1,0 +1,26 @@
+type: "BARBECUE"
+area:
+  firstCorner:
+    x: 0.0
+    y: 68.0
+    z: 0.0
+  secondCorner:
+    x: 10.0
+    y: 74.0
+    z: 10.0
+levels:
+- price: 1
+  schem: "BARBECUE.nbt"
+  income: 1
+- price: 2
+  schem: "BARBECUE.nbt"
+  income: 2
+- price: 3
+  schem: "BARBECUE.nbt"
+  income: 3
+- price: 4
+  schem: "BARBECUE.nbt"
+  income: 4
+- price: 5
+  schem: "BARBECUE.nbt"
+  income: 5

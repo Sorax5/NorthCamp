@@ -1,0 +1,21 @@
+type: "CAMPSITE"
+area:
+  firstCorner:
+    x: 0.0
+    y: 0.0
+    z: 0.0
+  secondCorner:
+    x: 8.0
+    y: 6.0
+    z: 8.0
+schem: "campsite.nbt"
+levels:
+- price: 0
+  schem: "campsite.nbt"
+  income: 10
+- price: 500
+  schem: "campsite.nbt"
+  income: 20
+- price: 1500
+  schem: "campsite.nbt"
+  income: 35
