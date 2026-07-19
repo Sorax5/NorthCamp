@@ -4,6 +4,7 @@ import fr.phylisiumstudio.logic.Campsite;
 import fr.phylisiumstudio.logic.client.Client;
 import fr.phylisiumstudio.logic.client.ClientEntity;
 import fr.phylisiumstudio.logic.client.ClientLifecycle;
+import fr.phylisiumstudio.app.interact.InteractionTags;
 import fr.phylisiumstudio.logic.client.ClientMemory;
 import fr.phylisiumstudio.logic.clock.event.PhaseChangeEvent;
 import fr.phylisiumstudio.logic.mapper.PositionMapper;
@@ -112,6 +113,8 @@ public class ClientView {
 
         var skin = skinLibrary.randomClientSkin(random).orElse(null);
         var entity = new ClientEntity(memory, skin);
+        entity.setTag(InteractionTags.KIND, InteractionTags.CLIENT);
+        entity.setTag(InteractionTags.ID, client.getUniqueID().toString());
         entity.setInstance(instance, spawnPos);
         memory.setPlayerEntity(entity);
         return entity;

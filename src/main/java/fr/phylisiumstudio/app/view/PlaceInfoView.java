@@ -14,8 +14,10 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.minestom.server.entity.Entity;
 import net.minestom.server.entity.EntityType;
+import fr.phylisiumstudio.app.interact.InteractionTags;
 import net.minestom.server.entity.metadata.display.AbstractDisplayMeta;
 import net.minestom.server.entity.metadata.display.TextDisplayMeta;
+import net.minestom.server.entity.metadata.other.InteractionMeta;
 import net.minestom.server.instance.InstanceContainer;
 import net.minestom.server.timer.Task;
 import net.minestom.server.timer.TaskSchedule;
@@ -34,6 +36,7 @@ import java.util.UUID;
 public class PlaceInfoView {
 
     private static final EntityType TEXT_DISPLAY = EntityType.fromKey("minecraft:text_display");
+    private static final EntityType INTERACTION = EntityType.fromKey("minecraft:interaction");
     private static final Vector3d DEFAULT_OFFSET = new Vector3d(0.5, 2.5, 0.5);
     private static final int REFRESH_SECONDS = 2;
     private static final double PRESENCE_RADIUS = 4.0;
@@ -43,6 +46,7 @@ public class PlaceInfoView {
     private final InstanceContainer instance;
     private final MarkerRegistry markerRegistry;
     private final java.util.Map<UUID, Entity> displays = new java.util.HashMap<>();
+    private final java.util.Map<UUID, Entity> interactions = new java.util.HashMap<>();
     private final List<Entity> staticDisplays = new ArrayList<>();
     private final Task refreshTask;
 
@@ -81,20 +85,37 @@ public class PlaceInfoView {
     public synchronized void refresh() {
         for (var plot : campsite.getPlots()) {
             var display = displays.computeIfAbsent(plot.getUniqueID(),
-                    _ -> spawn(plot.getUniqueID(), plot.getPosition()));
+                    id -> spawn(id, plot.getPosition(), InteractionTags.PLOT, id.toString()));
             setText(display, plotInfo(plot));
         }
         for (var activity : campsite.getActivities()) {
             var display = displays.computeIfAbsent(activity.getUniqueID(),
-                    _ -> spawn(activity.getUniqueID(), activity.getPosition()));
+                    id -> spawn(id, activity.getPosition(), InteractionTags.ACTIVITY, id.toString()));
             setText(display, activityInfo(activity));
         }
     }
 
-    private Entity spawn(UUID placeId, Vector3d base) {
+    private Entity spawn(UUID placeId, Vector3d base, String kind, String id) {
         var position = markerRegistry.get(placeId).firstOr(MarkerTags.INFO,
                 new Vector3d(base).add(DEFAULT_OFFSET));
+        // Hitbox cliquable co-localisée avec le panneau.
+        var interaction = newInteraction(position, kind, id);
+        interactions.put(placeId, interaction);
         return newDisplay(position);
+    }
+
+    private Entity newInteraction(Vector3d position, String kind, String id) {
+        var entity = new Entity(INTERACTION);
+        entity.editEntityMeta(InteractionMeta.class, meta -> {
+            meta.setWidth(1.4f);
+            meta.setHeight(1.4f);
+            meta.setResponse(true);
+        });
+        entity.setTag(InteractionTags.KIND, kind);
+        entity.setTag(InteractionTags.ID, id);
+        // Centre l'hitbox sur le texte (l'entité interaction s'ancre par le bas).
+        entity.setInstance(instance, PositionMapper.toMinestomPos(new Vector3d(position).sub(0, 0.7, 0)));
+        return entity;
     }
 
     private Entity newDisplay(Vector3d position) {
@@ -177,9 +198,13 @@ public class PlaceInfoView {
         for (var entity : displays.values()) {
             entity.getAcquirable().sync(Entity::remove);
         }
+        for (var entity : interactions.values()) {
+            entity.getAcquirable().sync(Entity::remove);
+        }
         for (var entity : staticDisplays) {
             entity.getAcquirable().sync(Entity::remove);
         }
+        interactions.clear();
         displays.clear();
         staticDisplays.clear();
     }

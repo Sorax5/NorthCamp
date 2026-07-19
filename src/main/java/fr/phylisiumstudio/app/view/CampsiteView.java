@@ -13,6 +13,7 @@ import fr.phylisiumstudio.logic.service.CampsiteService;
 import fr.phylisiumstudio.logic.service.InstanceService;
 import fr.phylisiumstudio.logic.skin.SkinLibrary;
 import fr.phylisiumstudio.logic.slot.LayoutService;
+import fr.phylisiumstudio.logic.slot.SlotService;
 import fr.phylisiumstudio.logic.staff.StaffBrain;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.entity.GameMode;
@@ -39,6 +40,7 @@ public class CampsiteView {
     private final List<ClientView> clientsStateViews;
     private final List<StaffView> staffViews;
     private final List<PlaceInfoView> placeInfoViews;
+    private final List<SlotView> slotViews;
     private final java.util.Map<java.util.UUID, SidebarView> sidebars = new java.util.concurrent.ConcurrentHashMap<>();
     private final CampsiteService campsiteService;
     private final InstanceService instanceService;
@@ -49,6 +51,7 @@ public class CampsiteView {
     private final MarkerRegistry markerRegistry;
     private final LayoutService layoutService;
     private final StaffBrain staffBrain;
+    private final SlotService slotService;
     private final Random random;
     private final boolean seedTestCampsite;
 
@@ -62,11 +65,13 @@ public class CampsiteView {
                         MarkerRegistry markerRegistry,
                         LayoutService layoutService,
                         StaffBrain staffBrain,
+                        SlotService slotService,
                         Random random,
                         App app) {
         this.clientsStateViews = new CopyOnWriteArrayList<>();
         this.staffViews = new CopyOnWriteArrayList<>();
         this.placeInfoViews = new CopyOnWriteArrayList<>();
+        this.slotViews = new CopyOnWriteArrayList<>();
         this.campsiteService = campsiteService;
         this.instanceService = instanceService;
         this.gameClockService = gameClockService;
@@ -76,6 +81,7 @@ public class CampsiteView {
         this.markerRegistry = markerRegistry;
         this.layoutService = layoutService;
         this.staffBrain = staffBrain;
+        this.slotService = slotService;
         this.random = random;
         var config = app.getMainConfig();
         this.seedTestCampsite = config == null || config.SeedTestCampsite;
@@ -123,6 +129,7 @@ public class CampsiteView {
         this.clientsStateViews.add(new ClientView(campsite, instanceContainer, reception, exit, skinLibrary, random));
         this.staffViews.add(new StaffView(campsite, instanceContainer, new Vector3d(STAFF_ORIGIN), reception, skinLibrary, staffBrain));
         this.placeInfoViews.add(new PlaceInfoView(campsite, instanceContainer, markerRegistry, layoutService));
+        this.slotViews.add(new SlotView(campsite, instanceContainer, slotService));
     }
 
     private void onPlayerDisconnect(PlayerDisconnectEvent event) {
@@ -165,6 +172,14 @@ public class CampsiteView {
             });
 
             placeInfoViews.removeIf(view -> {
+                if (view.getCampsite().getUniqueID().equals(campsite.getUniqueID())) {
+                    view.dispose();
+                    return true;
+                }
+                return false;
+            });
+
+            slotViews.removeIf(view -> {
                 if (view.getCampsite().getUniqueID().equals(campsite.getUniqueID())) {
                     view.dispose();
                     return true;
