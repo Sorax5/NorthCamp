@@ -20,6 +20,7 @@ public record DaySummary(
         long campers,
         long queue,
         int stars,
-        boolean starMilestone
+        boolean starMilestone,
+        CampEvent event
 ) {
 }

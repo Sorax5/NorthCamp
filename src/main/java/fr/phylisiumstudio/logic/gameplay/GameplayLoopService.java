@@ -55,6 +55,7 @@ public class GameplayLoopService {
     private final PlotDataService plotDataService;
     private final PlotUpgradeService plotUpgradeService;
     private final RatingService ratingService;
+    private final EventService eventService;
     private final Random random;
 
     /** Solde de chaque camping au matin précédent, pour calculer le bénéfice du jour. */
@@ -71,6 +72,7 @@ public class GameplayLoopService {
                                PlotDataService plotDataService,
                                PlotUpgradeService plotUpgradeService,
                                RatingService ratingService,
+                               EventService eventService,
                                Random random) {
         this.stayService = stayService;
         this.marketService = marketService;
@@ -80,6 +82,7 @@ public class GameplayLoopService {
         this.plotDataService = plotDataService;
         this.plotUpgradeService = plotUpgradeService;
         this.ratingService = ratingService;
+        this.eventService = eventService;
         this.random = random;
 
         // Nœud dédié attaché à la racine : regroupe la logique de la boucle et
@@ -107,6 +110,10 @@ public class GameplayLoopService {
 
         marketService.fluctuate();
         degradeActivities(campsite);
+
+        // Événement du jour (orage, ours, festival) : peut fermer les activités,
+        // effrayer les campeurs ou doper la réputation.
+        var event = eventService.maybeTrigger(campsite);
 
         // Les clients en attente perdent patience jour après jour ; trop insatisfaits,
         // ils abandonnent la file (perte + réputation).
@@ -174,7 +181,7 @@ public class GameplayLoopService {
         return new DaySummary(dayNumber, seasonService.seasonOf(dayNumber).displayName(),
                 seasonService.isSpecialEvent(dayNumber), departing.size(), abandoned,
                 salaries, net, campsite.getMoney(), campsite.getReputation(), campers, queue,
-                stars, milestone);
+                stars, milestone, event);
     }
 
     /** Affiche le bilan du matin aux joueurs de l'instance du camping. */
@@ -191,6 +198,10 @@ public class GameplayLoopService {
 
         instance.sendMessage(sep);
         instance.sendMessage(title);
+        if (s.event() != null) {
+            instance.sendMessage(Component.text(s.event().displayName() + " — " + s.event().description(),
+                    s.event().positive() ? NamedTextColor.GREEN : NamedTextColor.RED, TextDecoration.BOLD));
+        }
         instance.sendMessage(line("Bénéfice du jour", netText, netColor));
         instance.sendMessage(line("Salaires versés", "-" + Math.round(s.salaries()) + " $", NamedTextColor.YELLOW));
         instance.sendMessage(line("Départs / abandons", s.departures() + " / " + s.abandoned(),

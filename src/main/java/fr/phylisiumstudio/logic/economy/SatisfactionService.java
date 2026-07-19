@@ -25,6 +25,8 @@ public class SatisfactionService {
     private static final double ACTIVITY_ENJOYED_BONUS = 8.0;
     /** Bonus supplémentaire quand l'activité correspond à l'archétype du client. */
     private static final double PREFERRED_ACTIVITY_BONUS = 6.0;
+    /** Baisse de satisfaction quand un client est effrayé (ex. ours). */
+    private static final double SCARE_PENALTY = 10.0;
 
     /** En dessous de ce seuil, un client en attente abandonne la file. */
     public static final double ABANDON_THRESHOLD = 30.0;
@@ -67,6 +69,11 @@ public class SatisfactionService {
     /** Pénalité quand le client trouve l'activité indisponible ou pleine. */
     public static void applyActivityUnavailable(Client client) {
         apply(client, -ACTIVITY_UNAVAILABLE_PENALTY);
+    }
+
+    /** Effroi (ex. intrusion d'un ours) : forte baisse ponctuelle de satisfaction. */
+    public static void applyScare(Client client) {
+        apply(client, -SCARE_PENALTY);
     }
 
     /**
