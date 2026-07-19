@@ -3,6 +3,8 @@ package fr.phylisiumstudio.logic.client.Action.bored;
 import com.badlogic.gdx.ai.btree.Task;
 import fr.phylisiumstudio.logic.client.Action.TimedLeafTask;
 import fr.phylisiumstudio.logic.client.ClientEntity;
+import fr.phylisiumstudio.logic.economy.EconomyService;
+import fr.phylisiumstudio.logic.economy.SatisfactionService;
 import fr.phylisiumstudio.logic.effect.Effects;
 
 import java.time.Duration;
@@ -26,8 +28,21 @@ public class DoTheActivity extends TimedLeafTask {
             return false;
         }
 
-        if (!activity.addClient(memory.getClient())) {
+        var client = memory.getClient();
+
+        if (!activity.addClient(client)) {
             entity.setCurrentAction("Oh, c'est plein !");
+            // Activité pleine : petite déception.
+            SatisfactionService.applyActivityUnavailable(client);
+            memory.setChoosenActivity(null);
+            return false;
+        }
+
+        if (!activity.consumeSupply()) {
+            // Rupture de stock : l'activité ne peut pas servir ce client.
+            entity.setCurrentAction("En rupture de stock");
+            activity.removeClient(client);
+            SatisfactionService.applyActivityUnavailable(client);
             memory.setChoosenActivity(null);
             return false;
         }
@@ -36,7 +51,13 @@ public class DoTheActivity extends TimedLeafTask {
         memory.setChoosenActivity(null);
         activityDuration = Duration.ofSeconds(activity.getDuration());
 
-        campsite.addMoney(activity.getPrice());
+        // Revenu plafonné au budget du client (plus de dépense infinie), et
+        // profiter d'une activité remonte sa satisfaction.
+        double earned = EconomyService.collectActivityIncome(campsite, client, activity.getPrice());
+        SatisfactionService.applyActivityEnjoyed(client, activity.getType());
+        Effects.moneyPopup(entity.getInstance(), entity.getPosition(), earned);
+        // Usure : trop de passages finissent par mettre l'activité en panne.
+        activity.recordUsage();
         return true;
     }
 
@@ -46,7 +67,7 @@ public class DoTheActivity extends TimedLeafTask {
         var entity = memory.getPlayerEntity();
         var activity = memory.getCurrentActivity();
 
-        entity.setCurrentAction("Doing " + activity.getType() + " (" + getTimeLeft().toSeconds() + "s left)");
+        entity.setCurrentAction(activity.getType().displayName() + " (" + getTimeLeft().toSeconds() + "s)");
     }
 
     @Override

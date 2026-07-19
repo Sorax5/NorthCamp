@@ -4,8 +4,12 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import fr.phylisiumstudio.logic.Campsite;
 import fr.phylisiumstudio.logic.activity.Activity;
+import fr.phylisiumstudio.logic.activity.ActivitySupplyService;
 import fr.phylisiumstudio.logic.activity.ActivityType;
+import fr.phylisiumstudio.logic.amenity.Amenity;
+import fr.phylisiumstudio.logic.amenity.AmenityInstance;
 import fr.phylisiumstudio.logic.economy.EconomyService;
+import fr.phylisiumstudio.logic.economy.MarketService;
 import fr.phylisiumstudio.logic.plot.Plot;
 import fr.phylisiumstudio.logic.plot.PlotType;
 import org.joml.Vector3d;
@@ -32,11 +36,13 @@ public class SlotService {
 
     private final LayoutService layoutService;
     private final EconomyService economyService;
+    private final MarketService marketService;
 
     @Inject
-    public SlotService(LayoutService layoutService, EconomyService economyService) {
+    public SlotService(LayoutService layoutService, EconomyService economyService, MarketService marketService) {
         this.layoutService = layoutService;
         this.economyService = economyService;
+        this.marketService = marketService;
     }
 
     /** Emplacements de camping encore libres (non déjà occupés par un plot défini). */
@@ -51,32 +57,69 @@ public class SlotService {
         return filterAvailable(layoutService.activitySlotPositions(), occupied, SlotKind.ACTIVITY);
     }
 
+    /** Emplacements de commodité encore libres (non déjà occupés par une commodité construite). */
+    public List<Slot> availableAmenitySlots(Campsite campsite) {
+        var occupied = roundedPositions(campsite.getBuiltAmenities().stream().map(AmenityInstance::position).toList());
+        return filterAvailable(layoutService.amenitySlotPositions(), occupied, SlotKind.AMENITY);
+    }
+
+    /**
+     * Construit une commodité du type choisi sur un emplacement de commodité libre.
+     * Chaque type ne peut être construit qu'une fois.
+     *
+     * @return l'{@link AmenityInstance} créée, ou {@code null} si l'achat a échoué
+     *         (fonds insuffisants, slot pris, ou type déjà construit).
+     */
+    public AmenityInstance buyAmenity(Campsite campsite, Vector3d position, Amenity type) {
+        if (campsite.hasAmenity(type)
+                || campsite.getMoney() < type.cost()
+                || !isAvailable(availableAmenitySlots(campsite), position)) {
+            return null;
+        }
+        economyService.charge(campsite, type.cost());
+        var instance = new AmenityInstance(type, new Vector3d(position));
+        campsite.addAmenity(instance);
+        return instance;
+    }
+
     /**
      * Achète et définit un emplacement de camping du type choisi.
      *
-     * @return {@code true} si l'achat a réussi (solde suffisant et slot libre).
+     * @return le {@link Plot} créé, ou {@code null} si l'achat a échoué
+     *         (solde insuffisant ou slot déjà pris).
      */
-    public boolean buyPlot(Campsite campsite, Vector3d position, PlotType type) {
+    public Plot buyPlot(Campsite campsite, Vector3d position, PlotType type) {
         if (campsite.getMoney() < PLOT_SLOT_PRICE || !isAvailable(availablePlotSlots(campsite), position)) {
-            return false;
+            return null;
         }
         economyService.charge(campsite, PLOT_SLOT_PRICE);
-        campsite.addPlot(new Plot(new Vector3d(position), type));
-        return true;
+        var plot = new Plot(new Vector3d(position), type);
+        // Tarif initial aligné sur le marché : le joueur encaisse dès la 1re nuit
+        // (satisfaction neutre) et ajuste ensuite à la hausse ou à la baisse.
+        plot.setPrice(marketService.fairPrice(type));
+        campsite.addPlot(plot);
+        return plot;
     }
 
     /**
      * Achète et définit un emplacement d'activité du type choisi.
      *
-     * @return {@code true} si l'achat a réussi.
+     * @return l'{@link Activity} créée, ou {@code null} si l'achat a échoué.
      */
-    public boolean buyActivity(Campsite campsite, Vector3d position, ActivityType type) {
+    public Activity buyActivity(Campsite campsite, Vector3d position, ActivityType type) {
         if (campsite.getMoney() < ACTIVITY_SLOT_PRICE || !isAvailable(availableActivitySlots(campsite), position)) {
-            return false;
+            return null;
         }
         economyService.charge(campsite, ACTIVITY_SLOT_PRICE);
-        campsite.addActivity(new Activity(new Vector3d(position), 15, 5, 4, type));
-        return true;
+        // Prix de base majoré du coût de fourniture : les activités à consommable
+        // se facturent plus cher. Stock de départ offert pour les mêmes.
+        double price = 5 + type.supplyCost();
+        var activity = new Activity(new Vector3d(position), 15, price, 4, type);
+        if (type.consumesSupplies()) {
+            activity.setSupplies(ActivitySupplyService.STARTING_SUPPLIES);
+        }
+        campsite.addActivity(activity);
+        return activity;
     }
 
     private List<Slot> filterAvailable(List<Vector3d> positions, Set<Vector3d> occupied, SlotKind kind) {

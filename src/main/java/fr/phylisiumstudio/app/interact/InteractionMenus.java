@@ -6,11 +6,17 @@ import fr.phylisiumstudio.app.menu.ChatMenu;
 import fr.phylisiumstudio.logic.Campsite;
 import fr.phylisiumstudio.logic.activity.Activity;
 import fr.phylisiumstudio.logic.activity.ActivityType;
+import fr.phylisiumstudio.logic.activity.ActivityUpgradeService;
+import fr.phylisiumstudio.logic.amenity.Amenity;
+import fr.phylisiumstudio.logic.service.ActivityDataService;
 import fr.phylisiumstudio.logic.client.Client;
 import fr.phylisiumstudio.logic.client.ClientLifecycle;
 import fr.phylisiumstudio.logic.economy.MarketService;
 import fr.phylisiumstudio.logic.plot.Plot;
 import fr.phylisiumstudio.logic.plot.PlotType;
+import fr.phylisiumstudio.logic.plot.PlotUpgradeService;
+import fr.phylisiumstudio.logic.rating.RatingService;
+import fr.phylisiumstudio.logic.service.PlotDataService;
 import fr.phylisiumstudio.logic.slot.Slot;
 import fr.phylisiumstudio.logic.slot.SlotService;
 import fr.phylisiumstudio.logic.staff.Staff;
@@ -32,11 +38,24 @@ public class InteractionMenus {
 
     private final MarketService marketService;
     private final SlotService slotService;
+    private final PlotUpgradeService upgradeService;
+    private final PlotDataService plotDataService;
+    private final ActivityUpgradeService activityUpgradeService;
+    private final ActivityDataService activityDataService;
+    private final fr.phylisiumstudio.app.vendor.VendorService vendorService;
 
     @Inject
-    public InteractionMenus(MarketService marketService, SlotService slotService) {
+    public InteractionMenus(MarketService marketService, SlotService slotService,
+                            PlotUpgradeService upgradeService, PlotDataService plotDataService,
+                            ActivityUpgradeService activityUpgradeService, ActivityDataService activityDataService,
+                            fr.phylisiumstudio.app.vendor.VendorService vendorService) {
         this.marketService = marketService;
         this.slotService = slotService;
+        this.upgradeService = upgradeService;
+        this.plotDataService = plotDataService;
+        this.activityUpgradeService = activityUpgradeService;
+        this.activityDataService = activityDataService;
+        this.vendorService = vendorService;
     }
 
     /** Clé de position stable (au bloc) pour identifier un slot. */
@@ -55,10 +74,18 @@ public class InteractionMenus {
                         && c.getPlot() != null && c.getPlot().getUniqueID().equals(plotId))
                 .findFirst().orElse(null);
 
-        var menu = ChatMenu.titled("Emplacement " + plot.getPlotType().name())
-                .text("Niveau : " + plot.getLevel(), NamedTextColor.WHITE)
+        var data = plotDataService.getPlotData(plot.getPlotType());
+        var type = plot.getPlotType();
+        var menu = ChatMenu.titled(type.displayName())
+                .text("Style : " + (type.stayMultiplier() < 1 ? "séjours courts" : "séjours longs")
+                        + ", confort +" + Math.round(type.comfortBonus()), NamedTextColor.DARK_AQUA)
+                .text("Niveau : " + plot.getLevel() + "  (revenu " + upgradeService.nightlyIncome(data, plot) + " $/nuit)",
+                        NamedTextColor.WHITE)
                 .text("Prix : " + Math.round(plot.getPrice()) + " $  (marché "
                         + Math.round(marketService.fairPrice(plot.getPlotType())) + " $)", NamedTextColor.GRAY)
+                .text("Loyer perçu : " + Math.round(plot.getPrice() * RatingService.priceMultiplier(campsite))
+                        + " $  (premium ★ ×" + String.format("%.2f", RatingService.priceMultiplier(campsite)) + ")",
+                        NamedTextColor.GREEN)
                 .text("État : " + (plot.isDirty() ? "Sale" : "Propre"),
                         plot.isDirty() ? NamedTextColor.RED : NamedTextColor.GREEN);
         if (occupant != null) {
@@ -67,8 +94,16 @@ public class InteractionMenus {
         } else {
             menu.text("Libre", NamedTextColor.GRAY);
         }
-        menu.blank().line(ChatMenu.button("Gérer les tarifs", NamedTextColor.YELLOW, "/pricing", "Tarification"))
-                .footer().send(player);
+        menu.blank();
+        var pricing = ChatMenu.button("Gérer les tarifs", NamedTextColor.YELLOW, "/pricing", "Tarification");
+        if (upgradeService.canUpgrade(data, plot)) {
+            menu.line(ChatMenu.row(pricing,
+                    ChatMenu.button("Améliorer (" + upgradeService.nextCost(data, plot) + " $)", NamedTextColor.GREEN,
+                            "/slots upgrade " + plotId, "Monter d'un niveau : plus de revenu par nuit")));
+        } else {
+            menu.line(pricing);
+        }
+        menu.footer().send(player);
     }
 
     public void openActivity(Player player, Campsite campsite, UUID activityId) {
@@ -76,21 +111,36 @@ public class InteractionMenus {
                 .findFirst().orElse(null);
         if (activity == null) return;
 
-        var menu = ChatMenu.titled("Activité " + activity.getType().name())
+        var menu = ChatMenu.titled("Activité " + activity.getType().displayName())
                 .text("Niveau : " + activity.getCurrentLevel(), NamedTextColor.WHITE)
                 .text("Prix : " + Math.round(activity.getPrice()) + " $", NamedTextColor.GRAY)
                 .text("État : " + (activity.isOperational() ? "Disponible" : "En panne"),
                         activity.isOperational() ? NamedTextColor.GREEN : NamedTextColor.RED)
                 .text("Clients : " + activity.getCurrentClients().size() + "/" + activity.getMaxClients(),
-                        NamedTextColor.GRAY)
-                .blank()
+                        NamedTextColor.GRAY);
+        if (activity.getType().consumesSupplies()) {
+            menu.text("Fournitures : " + activity.getSupplies()
+                    + (activity.hasSupplies() ? "" : " — RUPTURE"),
+                    activity.hasSupplies() ? NamedTextColor.GRAY : NamedTextColor.RED);
+        }
+        menu.blank()
                 .line(ChatMenu.row(
                         ChatMenu.button("-1", NamedTextColor.RED, "/activities price " + activityId + " -1", "Baisser le prix"),
                         ChatMenu.button("+1", NamedTextColor.GREEN, "/activities price " + activityId + " 1", "Augmenter le prix"),
                         activity.isOperational()
                                 ? Component.text("[OK]", NamedTextColor.DARK_GRAY)
-                                : ChatMenu.button("Réparer", NamedTextColor.YELLOW, "/activities repair " + activityId, "Remettre en service")))
-                .footer();
+                                : ChatMenu.button("Réparer", NamedTextColor.YELLOW, "/activities repair " + activityId, "Remettre en service")));
+
+        var activityData = activityDataService.getActivityData(activity.getType());
+        if (activityUpgradeService.canUpgrade(activityData, activity)) {
+            menu.line(ChatMenu.button("Améliorer (" + activityUpgradeService.nextCost(activityData, activity) + " $)",
+                    NamedTextColor.GOLD, "/activities upgrade " + activityId, "Monter d'un niveau : +capacité, +revenu"));
+        }
+        if (activity.getType().consumesSupplies()) {
+            menu.line(ChatMenu.button("Ravitailler +10 (" + (activity.getType().supplyCost() * 10) + " $)",
+                    NamedTextColor.YELLOW, "/activities restock " + activityId + " 10", "Acheter 10 fournitures"));
+        }
+        menu.footer();
         menu.send(player);
     }
 
@@ -101,7 +151,7 @@ public class InteractionMenus {
 
         var role = staff.getAssignedRole();
         ChatMenu.titled("Employé " + staff.getName())
-                .text("Rôle : " + (role != null ? role.name() : "inactif"), NamedTextColor.AQUA)
+                .text("Rôle : " + (role != null ? role.displayName() : "inactif"), NamedTextColor.AQUA)
                 .text("Salaire : " + Math.round(staff.getDailySalary()) + " $/j", NamedTextColor.YELLOW)
                 .blank()
                 .line(ChatMenu.row(
@@ -116,8 +166,13 @@ public class InteractionMenus {
                 .findFirst().orElse(null);
         if (client == null) return;
 
+        var archetype = client.getArchetype();
+        var prefText = archetype != null && archetype.preferredActivity() != null
+                ? " — aime " + archetype.preferredActivity().displayName()
+                : "";
         var menu = ChatMenu.titled(client.isFamily() ? "Famille ×" + client.getGroupSize() : "Client")
-                .text("État : " + client.getLifecycle(), NamedTextColor.AQUA)
+                .text("Profil : " + (archetype != null ? archetype.displayName() : "?") + prefText, NamedTextColor.GOLD)
+                .text("État : " + client.getLifecycle().displayName(), NamedTextColor.AQUA)
                 .text("Séjour : " + client.getRemainingDays() + "/" + client.getTotalStayDays() + " j", NamedTextColor.WHITE)
                 .text("Budget : " + Math.round(client.getBudget()) + " $", NamedTextColor.GREEN)
                 .text("Satisfaction : " + Math.round(client.getSatisfaction()) + "%", NamedTextColor.LIGHT_PURPLE)
@@ -156,20 +211,70 @@ public class InteractionMenus {
             menu.text("Coût : " + Math.round(SlotService.PLOT_SLOT_PRICE) + " $", NamedTextColor.GOLD).blank();
             var parts = new Component[PlotType.values().length];
             for (int i = 0; i < PlotType.values().length; i++) {
-                var name = PlotType.values()[i].name();
-                parts[i] = ChatMenu.button(name, NamedTextColor.YELLOW,
-                        "/slots buyplot " + index + " " + name, "Définir en " + name);
+                var pt = PlotType.values()[i];
+                parts[i] = ChatMenu.button(pt.displayName(), NamedTextColor.YELLOW,
+                        "/slots buyplot " + index + " " + pt.name(),
+                        pt.stayMultiplier() < 1 ? "Séjours courts, gros bonus de joie" : "Séjours longs, confort posé");
             }
             menu.line(ChatMenu.row(parts));
         } else {
             menu.text("Coût : " + Math.round(SlotService.ACTIVITY_SLOT_PRICE) + " $", NamedTextColor.GOLD).blank();
             var parts = new Component[ActivityType.values().length];
             for (int i = 0; i < ActivityType.values().length; i++) {
-                var name = ActivityType.values()[i].name();
-                parts[i] = ChatMenu.button(name, NamedTextColor.YELLOW,
-                        "/slots buyactivity " + index + " " + name, "Définir en " + name);
+                var at = ActivityType.values()[i];
+                parts[i] = ChatMenu.button(at.displayName(), NamedTextColor.YELLOW,
+                        "/slots buyactivity " + index + " " + at.name(),
+                        at.consumesSupplies() ? "Consomme des fournitures, tarif plus élevé" : "Sans fourniture");
             }
             menu.line(ChatMenu.row(parts));
+        }
+        menu.footer().send(player);
+    }
+
+    public void openVendor(Player player, Campsite campsite) {
+        var offered = vendorService.offeredPatents(campsite.getUniqueID());
+        if (offered.isEmpty()) {
+            player.sendMessage(Component.text("Le marchand est déjà reparti.", NamedTextColor.RED));
+            return;
+        }
+        var menu = ChatMenu.titled("Marchand ambulant")
+                .text("Brevets — améliorations permanentes. Il repart bientôt !", NamedTextColor.GRAY)
+                .text("Solde : " + Math.round(campsite.getMoney()) + " $", NamedTextColor.GREEN)
+                .blank();
+        for (var patent : offered) {
+            menu.text(patent.displayName() + " — " + patent.description(), NamedTextColor.AQUA);
+            menu.line(ChatMenu.button("Acheter (" + patent.cost() + " $)", NamedTextColor.GREEN,
+                    "/patents buy " + patent.name(), patent.description()));
+        }
+        menu.footer().send(player);
+    }
+
+    public void openAmenitySlot(Player player, Campsite campsite, String posKey) {
+        var slots = slotService.availableAmenitySlots(campsite);
+        int index = -1;
+        for (var slot : slots) {
+            if (slotKey(slot.position()).equals(posKey)) {
+                index = slot.index();
+                break;
+            }
+        }
+        if (index < 0) {
+            player.sendMessage(Component.text("Cet emplacement n'est plus disponible.", NamedTextColor.RED));
+            return;
+        }
+
+        var menu = ChatMenu.titled("Service à construire");
+        var buildable = java.util.Arrays.stream(Amenity.values())
+                .filter(a -> !campsite.hasAmenity(a))
+                .toList();
+        if (buildable.isEmpty()) {
+            menu.text("Tous les services sont déjà construits.", NamedTextColor.GRAY);
+        } else {
+            menu.text("Chaque service construit rend les campeurs plus heureux.", NamedTextColor.GRAY).blank();
+            for (var amenity : buildable) {
+                menu.line(ChatMenu.button(amenity.displayName() + " (" + amenity.cost() + " $)", NamedTextColor.YELLOW,
+                        "/slots buyamenity " + index + " " + amenity.name(), "Construire " + amenity.displayName()));
+            }
         }
         menu.footer().send(player);
     }

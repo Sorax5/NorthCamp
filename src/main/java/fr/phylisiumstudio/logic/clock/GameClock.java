@@ -38,8 +38,16 @@ public class GameClock {
      * <p>Jour → 0..12000, nuit → 12000..24000.
      */
     public long minecraftTime() {
+        return minecraftTime(0.0);
+    }
+
+    /**
+     * Heure Minecraft avec une progression sous-seconde ({@code extraSeconds} ∈ [0,1[)
+     * pour un défilement du ciel fluide entre deux ticks d'horloge, sans à-coups.
+     */
+    public long minecraftTime(double extraSeconds) {
         int duration = currentDuration();
-        double fraction = duration <= 0 ? 0.0 : Math.min(1.0, (double) secondsInPhase / duration);
+        double fraction = duration <= 0 ? 0.0 : Math.min(1.0, (secondsInPhase + extraSeconds) / duration);
         long base = phase == GamePhase.DAY ? 0L : 12_000L;
         return (base + Math.round(fraction * 12_000.0)) % 24_000L;
     }

@@ -4,6 +4,7 @@ import com.google.inject.Singleton;
 import fr.phylisiumstudio.logic.Campsite;
 import fr.phylisiumstudio.logic.client.Client;
 import fr.phylisiumstudio.logic.plot.Plot;
+import fr.phylisiumstudio.logic.rating.RatingService;
 
 /**
  * Centralise les mouvements d'argent du camping : location des emplacements et
@@ -18,7 +19,9 @@ public class EconomyService {
      * @return le montant réellement facturé.
      */
     public double chargeRent(Campsite campsite, Client client, Plot plot) {
-        double amount = Math.min(plot.getPrice(), client.getBudget());
+        // Le loyer effectif grimpe avec la note du camping (premium étoiles).
+        double rent = plot.getPrice() * RatingService.priceMultiplier(campsite);
+        double amount = Math.min(rent, client.getBudget());
         return transfer(campsite, client, amount);
     }
 
@@ -28,8 +31,25 @@ public class EconomyService {
      * @return le montant réellement encaissé.
      */
     public double earnActivityIncome(Campsite campsite, Client client, double income) {
-        double amount = Math.min(income, client.getBudget());
-        return transfer(campsite, client, amount);
+        return collectActivityIncome(campsite, client, income);
+    }
+
+    /**
+     * Encaisse le revenu d'une activité, plafonné au budget restant du client.
+     * Statique pour être appelable depuis l'arbre de comportement (hors DI).
+     *
+     * @return le montant réellement encaissé.
+     */
+    public static double collectActivityIncome(Campsite campsite, Client client, double income) {
+        // Revenu d'activité majoré par la note du camping (premium étoiles).
+        double gross = income * RatingService.priceMultiplier(campsite);
+        double amount = Math.min(gross, client.getBudget());
+        if (amount <= 0) {
+            return 0.0;
+        }
+        client.setBudget(client.getBudget() - amount);
+        campsite.addMoney(amount);
+        return amount;
     }
 
     private double transfer(Campsite campsite, Client client, double amount) {

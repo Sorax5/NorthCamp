@@ -34,6 +34,7 @@ public class LayoutService {
     // Grille par défaut si aucun layout n'est fourni.
     private static final int DEFAULT_PLOT_SLOTS = 12;
     private static final int DEFAULT_ACTIVITY_SLOTS = 4;
+    private static final int DEFAULT_AMENITY_SLOTS = 5;
     private static final int GRID_COLUMNS = 6;
     private static final int SPACING = 12;
 
@@ -41,6 +42,7 @@ public class LayoutService {
 
     private final List<Vector3d> plotSlots = new ArrayList<>();
     private final List<Vector3d> activitySlots = new ArrayList<>();
+    private final List<Vector3d> amenitySlots = new ArrayList<>();
 
     // Points globaux : marqueur du layout si présent, sinon position par défaut
     // (dont l'absence est signalée par un panneau in-game).
@@ -58,6 +60,7 @@ public class LayoutService {
     public void load() {
         plotSlots.clear();
         activitySlots.clear();
+        amenitySlots.clear();
 
         var layout = tryGetLayout();
         if (layout != null) {
@@ -77,8 +80,12 @@ public class LayoutService {
         if (activitySlots.isEmpty()) {
             activitySlots.addAll(defaultGrid(DEFAULT_ACTIVITY_SLOTS, new Vector3d(ORIGIN).add(0, 0, -20)));
         }
+        if (amenitySlots.isEmpty()) {
+            amenitySlots.addAll(defaultGrid(DEFAULT_AMENITY_SLOTS, new Vector3d(ORIGIN).add(0, 0, -32)));
+        }
 
-        logger.info("Layout loaded: {} plot slots, {} activity slots", plotSlots.size(), activitySlots.size());
+        logger.info("Layout loaded: {} plot slots, {} activity slots, {} amenity slots",
+                plotSlots.size(), activitySlots.size(), amenitySlots.size());
     }
 
     public List<Vector3d> plotSlotPositions() {
@@ -87,6 +94,10 @@ public class LayoutService {
 
     public List<Vector3d> activitySlotPositions() {
         return List.copyOf(activitySlots);
+    }
+
+    public List<Vector3d> amenitySlotPositions() {
+        return List.copyOf(amenitySlots);
     }
 
     public Vector3d receptionPosition() {

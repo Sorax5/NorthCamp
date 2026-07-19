@@ -31,13 +31,14 @@ class StaffServiceTest {
         var economy = new EconomyService();
         var checkIn = new CheckInService(assignment, economy,
                 new MarketService(new Random(1)), new SatisfactionService());
-        return new StaffService(assignment, stay, checkIn, economy);
+        return new StaffService(assignment, stay, checkIn, economy,
+                new fr.phylisiumstudio.logic.activity.ActivitySupplyService(economy));
     }
 
     private static Staff staff(StaffRole role, double skill, double salary) {
         Map<StaffRole, Double> skills = new EnumMap<>(StaffRole.class);
         skills.put(role, skill);
-        return new Staff(UUID.randomUUID(), "Bob", skills, salary, StaffLook.VARIANT_A, role);
+        return new Staff(UUID.randomUUID(), "Bob", skills, salary, StaffLook.VARIANT_A, role, null);
     }
 
     private static Plot plot() {
@@ -56,6 +57,24 @@ class StaffServiceTest {
         double paid = svc.paySalaries(campsite);
         assertEquals(120, paid);
         assertEquals(880, campsite.getMoney());
+    }
+
+    @Test
+    void supplyStaffRestocksItsAssignedActivityWhenLow() {
+        var svc = service();
+        var campsite = new Campsite(UUID.randomUUID());
+        campsite.addMoney(10_000);
+
+        var barbecue = new Activity(new Vector3d(), 15, 5, 4, ActivityType.BARBECUE);
+        barbecue.setSupplies(2); // sous le seuil bas
+        campsite.addActivity(barbecue);
+
+        var supplier = staff(StaffRole.SUPPLY, 0.8, 100);
+        supplier.setAssignedActivityId(barbecue.getUniqueID());
+        svc.hire(campsite, supplier);
+
+        svc.runAutomation(campsite);
+        assertTrue(barbecue.getSupplies() > 2, "l'activité doit avoir été réapprovisionnée");
     }
 
     @Test

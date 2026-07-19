@@ -32,6 +32,9 @@ public class Staff {
     /** Rôle sur lequel l'employé travaille actuellement ({@code null} = inactif). */
     private StaffRole assignedRole;
 
+    /** Activité dont l'employé s'occupe (rôle {@link StaffRole#SUPPLY}) ; {@code null} sinon. */
+    private UUID assignedActivityId;
+
     @JsonCreator
     public Staff(
             @JsonProperty("uniqueId") UUID uniqueId,
@@ -39,7 +42,8 @@ public class Staff {
             @JsonProperty("skills") Map<StaffRole, Double> skills,
             @JsonProperty("dailySalary") double dailySalary,
             @JsonProperty("look") StaffLook look,
-            @JsonProperty("assignedRole") StaffRole assignedRole
+            @JsonProperty("assignedRole") StaffRole assignedRole,
+            @JsonProperty("assignedActivityId") UUID assignedActivityId
     ) {
         this.uniqueId = uniqueId != null ? uniqueId : UUID.randomUUID();
         this.name = name;
@@ -47,6 +51,7 @@ public class Staff {
         this.dailySalary = dailySalary;
         this.look = look != null ? look : StaffLook.VARIANT_A;
         this.assignedRole = assignedRole;
+        this.assignedActivityId = assignedActivityId;
     }
 
     /** Aptitude de l'employé pour un rôle (0 s'il ne le maîtrise pas). */

@@ -21,4 +21,6 @@ public final class InteractionTags {
     public static final String CLIENT = "client";
     public static final String SLOT_PLOT = "slot_plot";
     public static final String SLOT_ACTIVITY = "slot_activity";
+    public static final String SLOT_AMENITY = "slot_amenity";
+    public static final String VENDOR = "vendor";
 }

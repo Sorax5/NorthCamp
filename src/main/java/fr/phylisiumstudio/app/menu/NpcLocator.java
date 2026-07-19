@@ -7,10 +7,13 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.entity.Entity;
 import net.minestom.server.entity.Player;
+import net.minestom.server.timer.Task;
 import net.minestom.server.timer.TaskSchedule;
 
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Aide à repérer un NPC (client ou employé) dans l'instance du joueur :
@@ -21,6 +24,9 @@ public final class NpcLocator {
     }
 
     private static final int GLOW_SECONDS = 5;
+
+    /** Tâche d'extinction en cours par NPC, pour qu'un re-locate ne l'éteigne pas trop tôt. */
+    private static final Map<UUID, Task> glowTasks = new ConcurrentHashMap<>();
 
     public static Optional<Entity> findStaff(Player player, UUID staffId) {
         return find(player, e -> e instanceof StaffEntity se && se.staffId().equals(staffId));
@@ -46,11 +52,20 @@ public final class NpcLocator {
 
     /** Fait briller le NPC quelques secondes pour le repérer. */
     public static void highlight(Player player, Entity npc) {
+        // Un re-locate annule l'extinction précédente pour repartir sur 5s pleins.
+        var previous = glowTasks.remove(npc.getUuid());
+        if (previous != null) {
+            previous.cancel();
+        }
         npc.setGlowing(true);
-        MinecraftServer.getSchedulerManager()
-                .buildTask(() -> npc.setGlowing(false))
+        var task = MinecraftServer.getSchedulerManager()
+                .buildTask(() -> {
+                    npc.setGlowing(false);
+                    glowTasks.remove(npc.getUuid());
+                })
                 .delay(TaskSchedule.seconds(GLOW_SECONDS))
                 .schedule();
+        glowTasks.put(npc.getUuid(), task);
         player.sendMessage(Component.text("NPC mis en surbrillance " + GLOW_SECONDS + "s.", NamedTextColor.AQUA));
     }
 }

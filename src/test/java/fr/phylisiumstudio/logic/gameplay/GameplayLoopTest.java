@@ -3,6 +3,7 @@ package fr.phylisiumstudio.logic.gameplay;
 import fr.phylisiumstudio.logic.Campsite;
 import fr.phylisiumstudio.logic.client.Client;
 import fr.phylisiumstudio.logic.client.ClientLifecycle;
+import fr.phylisiumstudio.logic.economy.SatisfactionService;
 import fr.phylisiumstudio.logic.plot.Plot;
 import fr.phylisiumstudio.logic.plot.PlotType;
 import org.joml.Vector3d;
@@ -42,6 +43,37 @@ class GameplayLoopTest {
         assertEquals(ClientLifecycle.STAYING, client.getLifecycle());
         assertSame(p, client.getPlot());
         assertTrue(assignment.availablePlots(campsite).isEmpty());
+    }
+
+    @Test
+    void plotTypeShapesStayLengthAndComfort() {
+        var campsite = new Campsite(UUID.randomUUID());
+        var caravan = new Plot(new Vector3d(0, 69, 0), PlotType.CARAVAN);
+        caravan.setLevel(1);
+        campsite.addPlot(caravan);
+        var client = solo(4); // séjour de base 4 jours
+        double baseSatisfaction = client.getSatisfaction();
+        campsite.addClient(client);
+
+        assertEquals(AssignmentOutcome.SUCCESS, assignment.assign(campsite, client, caravan));
+
+        // Caravane : séjour allongé (×1,4 -> 6) et bonus de confort à l'installation.
+        assertEquals(6, client.getTotalStayDays());
+        assertEquals(6, client.getRemainingDays());
+        assertTrue(client.getSatisfaction() > baseSatisfaction);
+    }
+
+    @Test
+    void tentGivesShorterStay() {
+        var campsite = new Campsite(UUID.randomUUID());
+        var tent = plot(0); // CAMPSITE
+        campsite.addPlot(tent);
+        var client = solo(4);
+        campsite.addClient(client);
+
+        assignment.assign(campsite, client, tent);
+        // Tente : ×0,7 -> 3 jours.
+        assertEquals(3, client.getTotalStayDays());
     }
 
     @Test
@@ -107,6 +139,23 @@ class GameplayLoopTest {
 
         stay.removeDeparted(campsite);
         assertTrue(campsite.getClients().isEmpty());
+    }
+
+    @Test
+    void waitingClientLosesPatienceAndEventuallyAbandonsQueue() {
+        var satisfaction = new SatisfactionService();
+        var client = solo(2); // satisfaction de départ = 70
+        assertFalse(satisfaction.shouldAbandonQueue(client), "ne doit pas abandonner dès l'arrivée");
+
+        // Applique l'impatience jusqu'à ce que la satisfaction franchisse le seuil.
+        int days = 0;
+        while (!satisfaction.shouldAbandonQueue(client) && days < 100) {
+            satisfaction.applyWaitingImpatience(client);
+            days++;
+        }
+
+        assertTrue(satisfaction.shouldAbandonQueue(client), "doit finir par abandonner");
+        assertTrue(days >= 3 && days <= 6, "abandon après ~4 jours d'attente, obtenu : " + days);
     }
 
     @Test

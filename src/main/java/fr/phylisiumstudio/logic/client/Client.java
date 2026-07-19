@@ -26,8 +26,8 @@ public class Client {
     /** Nombre de personnes (1 = client seul, >1 = famille/groupe). */
     private final int groupSize;
 
-    /** Durée de séjour prévue, en jours de jeu. */
-    private final int totalStayDays;
+    /** Durée de séjour prévue, en jours de jeu (ajustée selon le type d'emplacement à l'installation). */
+    private int totalStayDays;
 
     /** Jours de séjour restants avant le départ. */
     private int remainingDays;
@@ -37,6 +37,12 @@ public class Client {
 
     /** Jauge de satisfaction 0–100 ; influence la fidélité et la réputation. */
     private double satisfaction;
+
+    /**
+     * Profil du client (attentes d'activité et sensibilité au prix). Sérialisé via
+     * setter ; les anciennes sauvegardes sans ce champ retombent sur {@link ClientArchetype#TOURIST}.
+     */
+    private ClientArchetype archetype = ClientArchetype.TOURIST;
 
     /** Client seul, sans séjour planifié — utilisé par les tests et l'ancien flux. */
     public Client(Plot plot) {

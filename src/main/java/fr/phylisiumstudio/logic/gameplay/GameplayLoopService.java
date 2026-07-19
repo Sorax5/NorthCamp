@@ -3,20 +3,32 @@ package fr.phylisiumstudio.logic.gameplay;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import fr.phylisiumstudio.logic.Campsite;
-import fr.phylisiumstudio.logic.activity.Activity;
 import fr.phylisiumstudio.logic.client.ClientLifecycle;
 import fr.phylisiumstudio.logic.clock.GamePhase;
 import fr.phylisiumstudio.logic.clock.event.PhaseChangeEvent;
 import fr.phylisiumstudio.logic.economy.MarketService;
+import fr.phylisiumstudio.logic.amenity.AmenityService;
 import fr.phylisiumstudio.logic.economy.SatisfactionService;
+import fr.phylisiumstudio.logic.economy.SolvencyService;
+import fr.phylisiumstudio.logic.effect.Toasts;
+import fr.phylisiumstudio.logic.plot.PlotUpgradeService;
+import fr.phylisiumstudio.logic.rating.RatingService;
 import fr.phylisiumstudio.logic.season.SeasonService;
+import fr.phylisiumstudio.logic.service.PlotDataService;
+import net.minestom.server.item.Material;
 import fr.phylisiumstudio.logic.staff.StaffService;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.event.EventNode;
+import net.minestom.server.instance.Instance;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Random;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Orchestre la boucle de gameplay quotidienne en réagissant aux transitions de
@@ -32,15 +44,25 @@ import java.util.Random;
 public class GameplayLoopService {
     private static final Logger logger = LoggerFactory.getLogger(GameplayLoopService.class);
 
-    /** Probabilité qu'une activité opérationnelle s'use et tombe en panne chaque jour. */
-    private static final double ACTIVITY_DEGRADE_CHANCE = 0.25;
+    /** Prime versée par étoile lorsqu'un camping atteint un nouveau palier de note. */
+    private static final double STAR_MILESTONE_REWARD_PER_STAR = 500.0;
 
     private final ClientStayService stayService;
     private final MarketService marketService;
     private final SatisfactionService satisfactionService;
     private final SeasonService seasonService;
     private final StaffService staffService;
-    private final Random random;
+    private final PlotDataService plotDataService;
+    private final PlotUpgradeService plotUpgradeService;
+    private final RatingService ratingService;
+    private final EventService eventService;
+    private final SolvencyService solvencyService;
+    private final AmenityService amenityService;
+
+    /** Solde de chaque camping au matin précédent, pour calculer le bénéfice du jour. */
+    private final Map<UUID, Double> lastMorningMoney = new ConcurrentHashMap<>();
+    /** Meilleur palier d'étoiles déjà atteint par camping, pour ne récompenser qu'une fois. */
+    private final Map<UUID, Integer> bestStars = new ConcurrentHashMap<>();
 
     @Inject
     public GameplayLoopService(ClientStayService stayService,
@@ -48,13 +70,23 @@ public class GameplayLoopService {
                                SatisfactionService satisfactionService,
                                SeasonService seasonService,
                                StaffService staffService,
-                               Random random) {
+                               PlotDataService plotDataService,
+                               PlotUpgradeService plotUpgradeService,
+                               RatingService ratingService,
+                               EventService eventService,
+                               SolvencyService solvencyService,
+                               AmenityService amenityService) {
         this.stayService = stayService;
         this.marketService = marketService;
         this.satisfactionService = satisfactionService;
         this.seasonService = seasonService;
         this.staffService = staffService;
-        this.random = random;
+        this.plotDataService = plotDataService;
+        this.plotUpgradeService = plotUpgradeService;
+        this.ratingService = ratingService;
+        this.eventService = eventService;
+        this.solvencyService = solvencyService;
+        this.amenityService = amenityService;
 
         // Nœud dédié attaché à la racine : regroupe la logique de la boucle et
         // reflète la structure du serveur plutôt que d'empiler sur le handler global.
@@ -65,7 +97,32 @@ public class GameplayLoopService {
 
     private void onPhaseChange(PhaseChangeEvent event) {
         if (event.phase() == GamePhase.DAY) {
-            openNewDay(event.campsite(), event.dayNumber());
+            var summary = openNewDay(event.campsite(), event.dayNumber());
+            renderSummary(event.getInstance(), summary);
+            notifyOwner(event.campsite(), summary);
+        }
+    }
+
+    /** Envoie les toasts des moments marquants du jour au propriétaire du camping. */
+    private void notifyOwner(Campsite campsite, DaySummary s) {
+        var player = MinecraftServer.getConnectionManager().getOnlinePlayerByUuid(campsite.getOwnerID());
+        if (player == null) {
+            return;
+        }
+        if (s.starMilestone()) {
+            Toasts.goal(player, Component.text(RatingService.render(s.stars()) + " — nouveau palier !"),
+                    Material.NETHER_STAR);
+        }
+        if (s.event() != null) {
+            var mat = switch (s.event()) {
+                case STORM -> Material.WATER_BUCKET;
+                case BEAR -> Material.LEATHER;
+                case FESTIVAL -> Material.FIREWORK_ROCKET;
+            };
+            Toasts.task(player, Component.text(s.event().displayName()), mat);
+        }
+        if (s.bankrupted()) {
+            Toasts.challenge(player, Component.text("Faillite ! Renflouement d'urgence"), Material.REDSTONE_BLOCK);
         }
     }
 
@@ -74,15 +131,25 @@ public class GameplayLoopService {
      * usure, réputation, salaires). Les arrivées, elles, se font en continu
      * pendant la journée via {@link ArrivalService}.
      */
-    public void openNewDay(Campsite campsite, long dayNumber) {
-        marketService.fluctuate();
-        degradeActivities(campsite);
+    public DaySummary openNewDay(Campsite campsite, long dayNumber) {
+        // Solde de référence : matin précédent (ou solde actuel au tout premier jour).
+        double previousMorning = lastMorningMoney.getOrDefault(campsite.getUniqueID(), campsite.getMoney());
 
-        // Les clients en attente trop insatisfaits abandonnent la file (perte + réputation).
+        marketService.fluctuate();
+
+        // Événement du jour (orage, ours, festival) : peut fermer les activités,
+        // effrayer les campeurs ou doper la réputation.
+        var event = eventService.maybeTrigger(campsite);
+
+        // Les clients en attente perdent patience jour après jour ; trop insatisfaits,
+        // ils abandonnent la file (perte + réputation).
         int abandoned = 0;
         for (var client : campsite.getClients()) {
-            if (client.getLifecycle() == ClientLifecycle.WAITING
-                    && satisfactionService.shouldAbandonQueue(client)) {
+            if (client.getLifecycle() != ClientLifecycle.WAITING) {
+                continue;
+            }
+            satisfactionService.applyWaitingImpatience(client);
+            if (satisfactionService.shouldAbandonQueue(client)) {
                 satisfactionService.applyQueueAbandonment(campsite);
                 client.setLifecycle(ClientLifecycle.GONE);
                 abandoned++;
@@ -100,6 +167,13 @@ public class GameplayLoopService {
         // Retire tous les partis (despawn par l'IA, abandons, sorties forcées).
         stayService.removeDeparted(campsite);
 
+        // Revenu passif nocturne des emplacements occupés (croît avec leur niveau).
+        collectPlotIncome(campsite);
+
+        // Confort des aménagements : chaque service construit remonte un peu la
+        // satisfaction des campeurs en séjour.
+        applyAmenityComfort(campsite);
+
         // Les séjours avancent ; ceux qui se terminent passent en LEAVING et leur
         // satisfaction finale est reportée maintenant sur la réputation.
         var departing = stayService.advanceDay(campsite);
@@ -111,20 +185,113 @@ public class GameplayLoopService {
         double salaries = staffService.paySalaries(campsite);
         staffService.runAutomation(campsite);
 
-        logger.info("Day {} ({}{}) for campsite {}: {} departures, {} abandoned, {} salaries (reputation {})",
+        // Solde négatif : intérêts de dette, érosion de réputation, faillite au-delà du seuil.
+        boolean bankrupted = solvencyService.settle(campsite);
+
+        // Note en étoiles : un nouveau palier atteint verse une prime (inclus dans le bénéfice).
+        int stars = ratingService.stars(campsite);
+        boolean milestone = stars > bestStars.getOrDefault(campsite.getUniqueID(), 0);
+        if (milestone) {
+            bestStars.put(campsite.getUniqueID(), stars);
+            campsite.addMoney(STAR_MILESTONE_REWARD_PER_STAR * stars);
+        }
+
+        // Bénéfice du jour = variation de solde depuis le matin précédent.
+        double net = campsite.getMoney() - previousMorning;
+        lastMorningMoney.put(campsite.getUniqueID(), campsite.getMoney());
+
+        long campers = campsite.getClients().stream()
+                .filter(c -> c.getLifecycle() == ClientLifecycle.STAYING).count();
+        long queue = campsite.getClients().stream()
+                .filter(c -> c.getLifecycle() == ClientLifecycle.WAITING).count();
+
+        logger.info("Day {} ({}{}) for campsite {}: {} departures, {} abandoned, {} salaries, net {} (reputation {})",
                 dayNumber, seasonService.seasonOf(dayNumber).displayName(),
                 seasonService.isSpecialEvent(dayNumber) ? " - événement spécial" : "",
                 campsite.getUniqueID(), departing.size(), abandoned,
-                salaries, Math.round(campsite.getReputation()));
+                salaries, Math.round(net), Math.round(campsite.getReputation()));
+
+        return new DaySummary(dayNumber, seasonService.seasonOf(dayNumber).displayName(),
+                seasonService.isSpecialEvent(dayNumber), departing.size(), abandoned,
+                salaries, net, campsite.getMoney(), campsite.getReputation(), campers, queue,
+                stars, milestone, event, bankrupted);
     }
 
-    /** Usure quotidienne : chaque activité opérationnelle peut tomber en panne. */
-    private void degradeActivities(Campsite campsite) {
-        for (Activity activity : campsite.getActivities()) {
-            if (activity.isOperational() && random.nextDouble() < ACTIVITY_DEGRADE_CHANCE) {
-                activity.setOperational(false);
+    /** Affiche le bilan du matin aux joueurs de l'instance du camping. */
+    private void renderSummary(Instance instance, DaySummary s) {
+        if (instance == null) {
+            return;
+        }
+        var sep = Component.text("──────────────────────────", NamedTextColor.DARK_GRAY);
+        var title = Component.text("☀ Bilan — Jour " + s.dayNumber() + " (" + s.season() + ")"
+                + (s.specialEvent() ? " ★ événement" : ""), NamedTextColor.GOLD, TextDecoration.BOLD);
+
+        var netColor = s.net() >= 0 ? NamedTextColor.GREEN : NamedTextColor.RED;
+        var netText = (s.net() >= 0 ? "+" : "") + Math.round(s.net()) + " $";
+
+        instance.sendMessage(sep);
+        instance.sendMessage(title);
+        if (s.event() != null) {
+            instance.sendMessage(Component.text(s.event().displayName() + " — " + s.event().description(),
+                    s.event().positive() ? NamedTextColor.GREEN : NamedTextColor.RED, TextDecoration.BOLD));
+        }
+        instance.sendMessage(line("Bénéfice du jour", netText, netColor));
+        instance.sendMessage(line("Salaires versés", "-" + Math.round(s.salaries()) + " $", NamedTextColor.YELLOW));
+        instance.sendMessage(line("Départs / abandons", s.departures() + " / " + s.abandoned(),
+                s.abandoned() > 0 ? NamedTextColor.RED : NamedTextColor.GRAY));
+        instance.sendMessage(line("Campeurs / file", s.campers() + " / " + s.queue(), NamedTextColor.AQUA));
+        instance.sendMessage(line("Solde", Math.round(s.money()) + " $", NamedTextColor.GREEN));
+        instance.sendMessage(line("Réputation", Math.round(s.reputation()) + " / 100", NamedTextColor.LIGHT_PURPLE));
+        instance.sendMessage(line("Note", RatingService.render(s.stars()), NamedTextColor.GOLD));
+        if (s.bankrupted()) {
+            instance.sendMessage(Component.text("⚠ Faillite ! Renflouement d'urgence : solde remis à zéro, réputation lourdement touchée.",
+                    NamedTextColor.RED, TextDecoration.BOLD));
+        } else if (s.money() < 0) {
+            instance.sendMessage(Component.text("⚠ Solde négatif : intérêts de dette et réputation en baisse. Redressez la barre !",
+                    NamedTextColor.RED));
+        }
+        if (s.starMilestone()) {
+            instance.sendMessage(Component.text("★ Nouveau palier ! Prime de "
+                    + Math.round(STAR_MILESTONE_REWARD_PER_STAR * s.stars()) + " $ versée.",
+                    NamedTextColor.GOLD, TextDecoration.BOLD));
+        }
+        instance.sendMessage(sep);
+    }
+
+    private static Component line(String label, String value, NamedTextColor valueColor) {
+        return Component.text()
+                .append(Component.text(label + " : ", NamedTextColor.GRAY))
+                .append(Component.text(value, valueColor))
+                .build();
+    }
+
+    /** Ajoute le revenu par nuit de chaque emplacement occupé par un client en séjour. */
+    private void collectPlotIncome(Campsite campsite) {
+        double income = 0;
+        for (var client : campsite.getClients()) {
+            if (client.getLifecycle() != ClientLifecycle.STAYING || client.getPlot() == null) {
+                continue;
+            }
+            var plot = client.getPlot();
+            income += plotUpgradeService.nightlyIncome(plotDataService.getPlotData(plot.getPlotType()), plot);
+        }
+        if (income > 0) {
+            campsite.addMoney(income);
+        }
+    }
+
+    /** Applique le bonus de confort des aménagements à chaque client en séjour. */
+    private void applyAmenityComfort(Campsite campsite) {
+        double bonus = amenityService.dailyComfortBonus(campsite);
+        if (bonus <= 0) {
+            return;
+        }
+        for (var client : campsite.getClients()) {
+            if (client.getLifecycle() == ClientLifecycle.STAYING) {
+                SatisfactionService.applyComfort(client, bonus);
             }
         }
     }
+
 
 }

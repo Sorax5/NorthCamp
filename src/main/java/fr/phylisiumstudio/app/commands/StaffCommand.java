@@ -7,6 +7,7 @@ import fr.phylisiumstudio.app.menu.NpcLocator;
 import fr.phylisiumstudio.logic.Campsite;
 import fr.phylisiumstudio.logic.service.CampsiteService;
 import fr.phylisiumstudio.logic.staff.Staff;
+import fr.phylisiumstudio.logic.staff.StaffEntity;
 import fr.phylisiumstudio.logic.staff.StaffMarket;
 import fr.phylisiumstudio.logic.staff.StaffRole;
 import fr.phylisiumstudio.logic.staff.StaffService;
@@ -57,6 +58,12 @@ public class StaffCommand extends Command {
             showMenu(sender);
         }), ArgumentType.Literal("assign"), idArg, roleArg);
 
+        var activityIdArg = ArgumentType.Word("activityId");
+        addSyntax((sender, ctx) -> withCampsite(sender, campsite -> {
+            assignSupply(campsite, UUID.fromString(ctx.get(idArg)), UUID.fromString(ctx.get(activityIdArg)));
+            showMenu(sender);
+        }), ArgumentType.Literal("supply"), idArg, activityIdArg);
+
         addSyntax((sender, ctx) -> withCampsite(sender, campsite -> {
             staffMarket.refresh(campsite.getUniqueID());
             showMenu(sender);
@@ -66,6 +73,23 @@ public class StaffCommand extends Command {
                 ArgumentType.Literal("tp"), idArg);
         addSyntax((sender, ctx) -> locate(sender, UUID.fromString(ctx.get(idArg)), false),
                 ArgumentType.Literal("locate"), idArg);
+
+        addSyntax((sender, ctx) -> wake(sender), ArgumentType.Literal("wake"));
+    }
+
+    /** Débloque tous les employés coincés de l'instance (téléportation à l'accueil). */
+    private void wake(CommandSender sender) {
+        if (!(sender instanceof Player player) || player.getInstance() == null) {
+            return;
+        }
+        int count = 0;
+        for (var entity : player.getInstance().getEntities()) {
+            if (entity instanceof StaffEntity) {
+                entity.getAcquirable().sync(e -> ((StaffEntity) e).unstick());
+                count++;
+            }
+        }
+        player.sendMessage(Component.text(count + " employé(s) débloqué(s).", NamedTextColor.GREEN));
     }
 
     /** Téléporte le joueur vers l'employé, ou le met en surbrillance. */
@@ -107,6 +131,9 @@ public class StaffCommand extends Command {
             for (var staff : campsite.getStaff()) {
                 menu.line(describe(staff, true));
                 menu.line(assignRow(staff));
+                if (!campsite.getActivities().isEmpty()) {
+                    menu.line(supplyRow(campsite, staff));
+                }
             }
         }
 
@@ -122,6 +149,7 @@ public class StaffCommand extends Command {
         menu.footer();
         menu.line(ChatMenu.row(
                 ChatMenu.button("Rafraîchir", NamedTextColor.AQUA, "/staff refresh", "Nouveaux candidats"),
+                ChatMenu.button("Débloquer", NamedTextColor.GOLD, "/staff wake", "Débloquer les employés coincés"),
                 ChatMenu.button("Retour", NamedTextColor.GRAY, "/camp", "Menu principal")));
         menu.send(sender);
     }
@@ -129,7 +157,7 @@ public class StaffCommand extends Command {
     private Component describe(Staff staff, boolean showRole) {
         var role = staff.getAssignedRole();
         var roleText = showRole
-                ? " [" + (role != null ? role.name() + " " + pct(staff.skill(role)) : "inactif") + "]"
+                ? " [" + (role != null ? role.displayName() + " " + pct(staff.skill(role)) : "inactif") + "]"
                 : " (spéc. " + topRole(staff) + ")";
         return Component.text(staff.getName(), NamedTextColor.AQUA)
                 .append(Component.text(roleText, NamedTextColor.GRAY))
@@ -150,6 +178,22 @@ public class StaffCommand extends Command {
         return builder.append(row).append(Component.text("  ")).append(locate);
     }
 
+    /** Boutons pour affecter l'employé au ravitaillement d'une des activités du camping. */
+    private Component supplyRow(Campsite campsite, Staff staff) {
+        var activities = campsite.getActivities();
+        var parts = new java.util.ArrayList<Component>();
+        for (var activity : activities) {
+            boolean current = activity.getUniqueID().equals(staff.getAssignedActivityId());
+            parts.add(ChatMenu.button(activity.getType().displayName(),
+                    current ? NamedTextColor.GREEN : NamedTextColor.WHITE,
+                    "/staff supply " + staff.getUniqueId() + " " + activity.getUniqueID(),
+                    "Ravitailler " + activity.getType().displayName() + " (compétence "
+                            + pct(staff.skill(StaffRole.SUPPLY)) + ")"));
+        }
+        return Component.text("  Ravit. : ", NamedTextColor.DARK_GRAY)
+                .append(ChatMenu.row(parts.toArray(new Component[0])));
+    }
+
     private void recruit(Campsite campsite, UUID candidateId) {
         staffMarket.candidates(campsite.getUniqueID()).stream()
                 .filter(s -> s.getUniqueId().equals(candidateId))
@@ -164,7 +208,29 @@ public class StaffCommand extends Command {
         campsite.getStaff().stream()
                 .filter(s -> s.getUniqueId().equals(staffId))
                 .findFirst()
-                .ifPresent(s -> s.setAssignedRole(role));
+                .ifPresent(s -> {
+                    s.setAssignedRole(role);
+                    // Changer pour un autre rôle détache l'activité de ravitaillement.
+                    if (role != StaffRole.SUPPLY) {
+                        s.setAssignedActivityId(null);
+                    }
+                });
+    }
+
+    /** Affecte l'employé au ravitaillement d'une activité précise. */
+    private void assignSupply(Campsite campsite, UUID staffId, UUID activityId) {
+        boolean activityExists = campsite.getActivities().stream()
+                .anyMatch(a -> a.getUniqueID().equals(activityId));
+        if (!activityExists) {
+            return;
+        }
+        campsite.getStaff().stream()
+                .filter(s -> s.getUniqueId().equals(staffId))
+                .findFirst()
+                .ifPresent(s -> {
+                    s.setAssignedRole(StaffRole.SUPPLY);
+                    s.setAssignedActivityId(activityId);
+                });
     }
 
     private static String topRole(Staff staff) {
@@ -174,7 +240,7 @@ public class StaffCommand extends Command {
                 best = role;
             }
         }
-        return best.name() + " " + pct(staff.skill(best));
+        return best.displayName() + " " + pct(staff.skill(best));
     }
 
     private static String pct(double skill) {

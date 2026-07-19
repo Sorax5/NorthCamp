@@ -5,5 +5,6 @@ package fr.phylisiumstudio.logic.slot;
  */
 public enum SlotKind {
     PLOT,
-    ACTIVITY
+    ACTIVITY,
+    AMENITY
 }

@@ -45,6 +45,7 @@ public class StaffBrain {
         return switch (role) {
             case CLEANING -> firstDirtyPlot(campsite).map(Plot::getPosition).orElse(reception);
             case MAINTENANCE -> firstBrokenActivity(campsite).map(Activity::getPosition).orElse(reception);
+            case SUPPLY -> assignedActivity(staff, campsite).map(Activity::getPosition).orElse(reception);
             case RECEPTION, FINANCE -> reception;
         };
     }
@@ -63,7 +64,8 @@ public class StaffBrain {
             case CLEANING -> clean(campsite);
             case MAINTENANCE -> maintain(campsite);
             case RECEPTION -> welcome(campsite);
-            case FINANCE -> false; // rendement financier appliqué quotidiennement
+            // Ravitaillement et finance : effets appliqués quotidiennement, le NPC se poste seulement.
+            case SUPPLY, FINANCE -> false;
         };
     }
 
@@ -81,8 +83,17 @@ public class StaffBrain {
         if (activity == null) {
             return false;
         }
-        activity.setOperational(true);
+        activity.repair();
         return true;
+    }
+
+    /** L'activité assignée à un employé de ravitaillement, si elle existe encore. */
+    private Optional<Activity> assignedActivity(Staff staff, Campsite campsite) {
+        var id = staff.getAssignedActivityId();
+        if (id == null) {
+            return Optional.empty();
+        }
+        return campsite.getActivities().stream().filter(a -> a.getUniqueID().equals(id)).findFirst();
     }
 
     private boolean welcome(Campsite campsite) {
@@ -120,6 +131,8 @@ public class StaffBrain {
             case MAINTENANCE -> firstBrokenActivity(campsite).isPresent();
             case RECEPTION -> campsite.getClients().stream()
                     .anyMatch(c -> c.getLifecycle() == ClientLifecycle.WAITING);
+            case SUPPLY -> assignedActivity(staff, campsite)
+                    .map(a -> a.getType().consumesSupplies() && a.getSupplies() < 5).orElse(false);
             case FINANCE -> false;
         };
     }

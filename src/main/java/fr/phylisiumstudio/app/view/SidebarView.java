@@ -2,6 +2,7 @@ package fr.phylisiumstudio.app.view;
 
 import fr.phylisiumstudio.logic.Campsite;
 import fr.phylisiumstudio.logic.client.ClientLifecycle;
+import fr.phylisiumstudio.logic.rating.RatingService;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -27,6 +28,7 @@ public class SidebarView {
         this.sidebar = new Sidebar(Component.text("⛺ North Camp", NamedTextColor.GOLD, TextDecoration.BOLD));
 
         // Les lignes de score élevé s'affichent en haut.
+        sidebar.createLine(new Sidebar.ScoreboardLine("rating", Component.empty(), 7));
         sidebar.createLine(new Sidebar.ScoreboardLine("money", Component.empty(), 6));
         sidebar.createLine(new Sidebar.ScoreboardLine("reputation", Component.empty(), 5));
         sidebar.createLine(new Sidebar.ScoreboardLine("campers", Component.empty(), 4));
@@ -50,6 +52,7 @@ public class SidebarView {
                 .filter(c -> c.getLifecycle() == ClientLifecycle.STAYING && c.getPlot() != null)
                 .count();
 
+        line("rating", "Note", RatingService.render(RatingService.ratingOf(campsite)), NamedTextColor.GOLD);
         line("money", "Argent", Math.round(campsite.getMoney()) + " $", NamedTextColor.GREEN);
         line("reputation", "Réputation", Math.round(campsite.getReputation()) + " / 100", NamedTextColor.LIGHT_PURPLE);
         line("campers", "Campeurs", String.valueOf(campers), NamedTextColor.AQUA);

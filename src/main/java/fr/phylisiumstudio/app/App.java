@@ -5,10 +5,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import fr.phylisiumstudio.app.commands.ActivitiesCommand;
+import fr.phylisiumstudio.app.commands.AmenitiesCommand;
 import fr.phylisiumstudio.app.commands.CampCommand;
 import fr.phylisiumstudio.app.commands.ClientsCommand;
 import fr.phylisiumstudio.app.commands.LeaderboardCommand;
 import fr.phylisiumstudio.app.commands.MoneyCommand;
+import fr.phylisiumstudio.app.commands.PatentsCommand;
 import fr.phylisiumstudio.app.commands.PricingCommand;
 import fr.phylisiumstudio.app.commands.ShutdownCommand;
 import fr.phylisiumstudio.app.commands.SlotsCommand;
@@ -51,6 +53,7 @@ import java.io.File;
 import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Singleton
 @Getter
@@ -100,6 +103,14 @@ public class App implements IApplication {
     private ActivitiesCommand activitiesCommand;
     @Inject
     private SlotsCommand slotsCommand;
+    @Inject
+    private AmenitiesCommand amenitiesCommand;
+    @Inject
+    private PatentsCommand patentsCommand;
+    @Inject
+    private ShutdownCommand shutdownCommand;
+    @Inject
+    private fr.phylisiumstudio.app.vendor.VendorService vendorService;
 
     @Inject
     private CampsiteView campsiteView;
@@ -133,8 +144,14 @@ public class App implements IApplication {
         StartServer();
     }
 
+    /** Garde-fou : le teardown ne doit s'exécuter qu'une fois (appel explicite + hook JVM). */
+    private final AtomicBoolean disabled = new AtomicBoolean(false);
+
     @Override
     public void OnDisable() {
+        if (!disabled.compareAndSet(false, true)) {
+            return;
+        }
         try {
             logger.info("Saving data...");
 
@@ -262,7 +279,7 @@ public class App implements IApplication {
             var address = new InetSocketAddress(mainConfig.Host, mainConfig.Port);
 
             var commandManager = MinecraftServer.getCommandManager();
-            commandManager.register(new ShutdownCommand());
+            commandManager.register(shutdownCommand);
             commandManager.register(moneyCommand);
             commandManager.register(leaderboardCommand);
             commandManager.register(campCommand);
@@ -271,6 +288,8 @@ public class App implements IApplication {
             commandManager.register(clientsCommand);
             commandManager.register(activitiesCommand);
             commandManager.register(slotsCommand);
+            commandManager.register(amenitiesCommand);
+            commandManager.register(patentsCommand);
 
             registerMotd();
 

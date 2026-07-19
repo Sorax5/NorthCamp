@@ -1,11 +1,14 @@
 package fr.phylisiumstudio.logic.economy;
 
 import fr.phylisiumstudio.logic.Campsite;
+import fr.phylisiumstudio.logic.activity.ActivityType;
 import fr.phylisiumstudio.logic.client.Client;
+import fr.phylisiumstudio.logic.client.ClientArchetype;
 import fr.phylisiumstudio.logic.gameplay.AssignmentOutcome;
 import fr.phylisiumstudio.logic.gameplay.PlotAssignmentService;
 import fr.phylisiumstudio.logic.plot.Plot;
 import fr.phylisiumstudio.logic.plot.PlotType;
+import fr.phylisiumstudio.logic.rating.RatingService;
 import org.joml.Vector3d;
 import org.junit.jupiter.api.Test;
 
@@ -37,8 +40,10 @@ class EconomyTest {
         var outcome = checkIn.checkIn(campsite, client, p);
 
         assertEquals(AssignmentOutcome.SUCCESS, outcome);
-        assertEquals(50.0, campsite.getMoney());
-        assertEquals(150.0, client.getBudget());
+        // Loyer de base 50 majoré du premium étoiles du camping.
+        double rent = 50.0 * RatingService.priceMultiplier(campsite);
+        assertEquals(rent, campsite.getMoney(), 1e-9);
+        assertEquals(200.0 - rent, client.getBudget(), 1e-9);
     }
 
     @Test
@@ -55,6 +60,33 @@ class EconomyTest {
     }
 
     @Test
+    void activityIncomeIsCappedByClientBudget() {
+        var campsite = new Campsite(UUID.randomUUID());
+        var client = new Client(1, 1, 10); // budget 10
+
+        double earned = EconomyService.collectActivityIncome(campsite, client, 25);
+
+        assertEquals(10.0, earned);
+        assertEquals(0.0, client.getBudget());
+        assertEquals(10.0, campsite.getMoney());
+        // Budget épuisé : plus rien encaissé la fois suivante.
+        assertEquals(0.0, EconomyService.collectActivityIncome(campsite, client, 25));
+    }
+
+    @Test
+    void enjoyingActivityRaisesSatisfactionAndFullOneLowersIt() {
+        var client = new Client(1, 1, 100);
+        double base = client.getSatisfaction();
+
+        SatisfactionService.applyActivityEnjoyed(client, ActivityType.SWIM);
+        assertTrue(client.getSatisfaction() > base);
+
+        double high = client.getSatisfaction();
+        SatisfactionService.applyActivityUnavailable(client);
+        assertTrue(client.getSatisfaction() < high);
+    }
+
+    @Test
     void overpricingLowersSatisfaction() {
         var sat = new SatisfactionService();
         var client = new Client(1, 1, 100);
@@ -62,6 +94,35 @@ class EconomyTest {
 
         sat.evaluatePricing(client, 2.0); // deux fois le prix juste
         assertTrue(client.getSatisfaction() < before);
+    }
+
+    @Test
+    void priceSensitivityDependsOnArchetype() {
+        var sat = new SatisfactionService();
+
+        var picky = new Client(1, 1, 100);
+        picky.setArchetype(ClientArchetype.TOURIST); // sensibilité 1.2
+        sat.evaluatePricing(picky, 2.0);
+
+        var relaxed = new Client(1, 1, 100);
+        relaxed.setArchetype(ClientArchetype.GRILLER); // sensibilité 0.7
+        sat.evaluatePricing(relaxed, 2.0);
+
+        // Même dépassement de prix : le fêtard s'en formalise moins que le touriste.
+        assertTrue(relaxed.getSatisfaction() > picky.getSatisfaction());
+    }
+
+    @Test
+    void preferredActivityGivesExtraSatisfaction() {
+        var angler = new Client(1, 1, 100);
+        angler.setArchetype(ClientArchetype.ANGLER); // préfère FISHING
+        var other = new Client(1, 1, 100);
+        other.setArchetype(ClientArchetype.ANGLER);
+
+        SatisfactionService.applyActivityEnjoyed(angler, ActivityType.FISHING); // préférée
+        SatisfactionService.applyActivityEnjoyed(other, ActivityType.SWIM);     // quelconque
+
+        assertTrue(angler.getSatisfaction() > other.getSatisfaction());
     }
 
     @Test

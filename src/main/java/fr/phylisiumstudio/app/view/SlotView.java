@@ -64,6 +64,9 @@ public class SlotView {
         for (var slot : slotService.availableActivitySlots(campsite)) {
             show(slot, InteractionTags.SLOT_ACTIVITY, "Emplacement d'activité libre", present);
         }
+        for (var slot : slotService.availableAmenitySlots(campsite)) {
+            show(slot, InteractionTags.SLOT_AMENITY, "Emplacement de service libre", present);
+        }
 
         // Retire les slots qui ne sont plus disponibles (achetés).
         slots.entrySet().removeIf(entry -> {
