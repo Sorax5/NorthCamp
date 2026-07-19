@@ -1,7 +1,7 @@
 package fr.phylisiumstudio.logic.client;
 
 import com.badlogic.gdx.ai.btree.BehaviorTree;
-import lombok.Data;
+import fr.phylisiumstudio.logic.effect.Effects;
 import lombok.Getter;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -23,6 +23,7 @@ public class ClientEntity extends EntityCreature {
 
     private final ClientMemory memory;
     private final BehaviorTree<ClientEntity> behaviorTree;
+    private ClientLifecycle lastLifecycle;
 
     public ClientEntity(ClientMemory memory) {
         this(memory, null);
@@ -61,6 +62,15 @@ public class ClientEntity extends EntityCreature {
             behaviorTree.step();
         } catch (Exception e) {
             logger.warn("Behavior tree step failed for client entity {}", getUuid(), e);
+        }
+
+        // Feedback visuel à l'installation (WAITING -> STAYING).
+        var lifecycle = memory.getClient().getLifecycle();
+        if (lifecycle != lastLifecycle) {
+            if (lifecycle == ClientLifecycle.STAYING) {
+                Effects.assigned(getInstance(), getPosition());
+            }
+            lastLifecycle = lifecycle;
         }
     }
 

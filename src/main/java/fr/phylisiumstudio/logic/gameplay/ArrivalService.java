@@ -56,7 +56,6 @@ public class ArrivalService {
     }
 
     private void maybeArrive(Campsite campsite) {
-        // Les clients n'arrivent que de jour.
         if (gameClockService.getPhase(campsite.getUniqueID()).orElse(GamePhase.NIGHT) != GamePhase.DAY) {
             return;
         }
