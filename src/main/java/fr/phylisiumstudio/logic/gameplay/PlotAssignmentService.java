@@ -4,6 +4,7 @@ import com.google.inject.Singleton;
 import fr.phylisiumstudio.logic.Campsite;
 import fr.phylisiumstudio.logic.client.Client;
 import fr.phylisiumstudio.logic.client.ClientLifecycle;
+import fr.phylisiumstudio.logic.economy.SatisfactionService;
 import fr.phylisiumstudio.logic.plot.Plot;
 
 import java.util.List;
@@ -61,6 +62,15 @@ public class PlotAssignmentService {
         client.setPlot(plot);
         client.setLifecycle(ClientLifecycle.STAYING);
         client.setAction(Client.ClientState.SLEEPY);
+
+        // Le type d'emplacement façonne l'expérience : durée de séjour modulée et
+        // bonus de satisfaction à l'installation.
+        var type = plot.getPlotType();
+        int adjustedStay = Math.max(1, (int) Math.round(client.getTotalStayDays() * type.stayMultiplier()));
+        client.setTotalStayDays(adjustedStay);
+        client.setRemainingDays(adjustedStay);
+        SatisfactionService.applyComfort(client, type.comfortBonus());
+
         return AssignmentOutcome.SUCCESS;
     }
 

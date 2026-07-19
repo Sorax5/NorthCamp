@@ -46,6 +46,37 @@ class GameplayLoopTest {
     }
 
     @Test
+    void plotTypeShapesStayLengthAndComfort() {
+        var campsite = new Campsite(UUID.randomUUID());
+        var caravan = new Plot(new Vector3d(0, 69, 0), PlotType.CARAVAN);
+        caravan.setLevel(1);
+        campsite.addPlot(caravan);
+        var client = solo(4); // séjour de base 4 jours
+        double baseSatisfaction = client.getSatisfaction();
+        campsite.addClient(client);
+
+        assertEquals(AssignmentOutcome.SUCCESS, assignment.assign(campsite, client, caravan));
+
+        // Caravane : séjour allongé (×1,4 -> 6) et bonus de confort à l'installation.
+        assertEquals(6, client.getTotalStayDays());
+        assertEquals(6, client.getRemainingDays());
+        assertTrue(client.getSatisfaction() > baseSatisfaction);
+    }
+
+    @Test
+    void tentGivesShorterStay() {
+        var campsite = new Campsite(UUID.randomUUID());
+        var tent = plot(0); // CAMPSITE
+        campsite.addPlot(tent);
+        var client = solo(4);
+        campsite.addClient(client);
+
+        assignment.assign(campsite, client, tent);
+        // Tente : ×0,7 -> 3 jours.
+        assertEquals(3, client.getTotalStayDays());
+    }
+
+    @Test
     void familyRequiresHigherLevelPlot() {
         var campsite = new Campsite(UUID.randomUUID());
         var basic = plot(0);

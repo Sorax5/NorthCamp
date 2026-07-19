@@ -70,7 +70,10 @@ public class InteractionMenus {
                 .findFirst().orElse(null);
 
         var data = plotDataService.getPlotData(plot.getPlotType());
-        var menu = ChatMenu.titled("Emplacement " + plot.getPlotType().name())
+        var type = plot.getPlotType();
+        var menu = ChatMenu.titled(type.displayName())
+                .text("Style : " + (type.stayMultiplier() < 1 ? "séjours courts" : "séjours longs")
+                        + ", confort +" + Math.round(type.comfortBonus()), NamedTextColor.DARK_AQUA)
                 .text("Niveau : " + plot.getLevel() + "  (revenu " + upgradeService.nightlyIncome(data, plot) + " $/nuit)",
                         NamedTextColor.WHITE)
                 .text("Prix : " + Math.round(plot.getPrice()) + " $  (marché "
@@ -191,9 +194,10 @@ public class InteractionMenus {
             menu.text("Coût : " + Math.round(SlotService.PLOT_SLOT_PRICE) + " $", NamedTextColor.GOLD).blank();
             var parts = new Component[PlotType.values().length];
             for (int i = 0; i < PlotType.values().length; i++) {
-                var name = PlotType.values()[i].name();
-                parts[i] = ChatMenu.button(name, NamedTextColor.YELLOW,
-                        "/slots buyplot " + index + " " + name, "Définir en " + name);
+                var pt = PlotType.values()[i];
+                parts[i] = ChatMenu.button(pt.displayName(), NamedTextColor.YELLOW,
+                        "/slots buyplot " + index + " " + pt.name(),
+                        pt.stayMultiplier() < 1 ? "Séjours courts, gros bonus de joie" : "Séjours longs, confort posé");
             }
             menu.line(ChatMenu.row(parts));
         } else {

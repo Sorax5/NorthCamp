@@ -26,8 +26,8 @@ public class Client {
     /** Nombre de personnes (1 = client seul, >1 = famille/groupe). */
     private final int groupSize;
 
-    /** Durée de séjour prévue, en jours de jeu. */
-    private final int totalStayDays;
+    /** Durée de séjour prévue, en jours de jeu (ajustée selon le type d'emplacement à l'installation). */
+    private int totalStayDays;
 
     /** Jours de séjour restants avant le départ. */
     private int remainingDays;
