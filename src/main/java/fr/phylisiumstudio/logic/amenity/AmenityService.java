@@ -30,6 +30,8 @@ public class AmenityService {
 
     /** Bonus de confort quotidien apporté par l'ensemble des aménagements construits. */
     public double dailyComfortBonus(Campsite campsite) {
-        return campsite.getBuiltAmenities().size() * COMFORT_PER_AMENITY;
+        // Brevet « Confort + » : effet des services renforcé de 50 %.
+        double factor = campsite.hasPatent(fr.phylisiumstudio.logic.vendor.Patent.COMFORT_PLUS) ? 1.5 : 1.0;
+        return campsite.getBuiltAmenities().size() * COMFORT_PER_AMENITY * factor;
     }
 }

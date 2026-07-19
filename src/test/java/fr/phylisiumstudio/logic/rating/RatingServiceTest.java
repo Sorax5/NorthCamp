@@ -42,6 +42,14 @@ class RatingServiceTest {
     }
 
     @Test
+    void premiumBrandPatentBoostsPriceMultiplier() {
+        var campsite = new Campsite(UUID.randomUUID());
+        double before = RatingService.priceMultiplier(campsite);
+        campsite.addPatent(fr.phylisiumstudio.logic.vendor.Patent.PREMIUM_BRAND);
+        assertTrue(RatingService.priceMultiplier(campsite) > before);
+    }
+
+    @Test
     void ratingBlendsReputationAndSatisfactionWithClients() {
         var campsite = new Campsite(UUID.randomUUID());
         // Sans client : basé sur la réputation seule (défaut 50 -> 2 étoiles).

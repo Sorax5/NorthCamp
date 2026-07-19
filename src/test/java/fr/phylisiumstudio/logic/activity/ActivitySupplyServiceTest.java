@@ -67,6 +67,18 @@ class ActivitySupplyServiceTest {
     }
 
     @Test
+    void ecoSuppliesPatentReducesRestockCost() {
+        var campsite = new Campsite(UUID.randomUUID());
+        campsite.addMoney(1_000);
+        campsite.addPatent(fr.phylisiumstudio.logic.vendor.Patent.ECO_SUPPLIES);
+        var fishing = of(ActivityType.FISHING); // supplyCost 4, base 40 pour 10
+
+        service.restock(campsite, fishing, 10);
+        // 40 * 0,7 = 28 dépensés (au lieu de 40).
+        assertEquals(1_000 - 28, campsite.getMoney());
+    }
+
+    @Test
     void restockRejectsNonConsumableOrInsufficientFunds() {
         var campsite = new Campsite(UUID.randomUUID());
         campsite.addMoney(10);

@@ -8,9 +8,13 @@ import fr.phylisiumstudio.logic.amenity.AmenityInstance;
 import fr.phylisiumstudio.logic.client.Client;
 import fr.phylisiumstudio.logic.plot.Plot;
 import fr.phylisiumstudio.logic.staff.Staff;
+import fr.phylisiumstudio.logic.vendor.Patent;
 import lombok.Getter;
 
+import java.util.Collection;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -30,6 +34,9 @@ public class Campsite {
     /** Aménagements construits (sanitaires, épicerie…), au bénéfice de tout le camping. */
     private final List<AmenityInstance> builtAmenities;
 
+    /** Brevets acquis auprès des marchands ambulants (améliorations globales permanentes). */
+    private final Set<Patent> patents;
+
     private double money = 0;
 
     /** Réputation du camping (0–100) ; attire plus ou moins de clients. */
@@ -43,6 +50,7 @@ public class Campsite {
         this.clients = new CopyOnWriteArrayList<>();
         this.staff = new CopyOnWriteArrayList<>();
         this.builtAmenities = new CopyOnWriteArrayList<>();
+        this.patents = EnumSet.noneOf(Patent.class);
     }
 
     @JsonCreator
@@ -55,7 +63,8 @@ public class Campsite {
             @JsonProperty("staff") List<Staff> staff,
             @JsonProperty("money") double money,
             @JsonProperty("reputation") double reputation,
-            @JsonProperty("builtAmenities") List<AmenityInstance> amenities
+            @JsonProperty("builtAmenities") List<AmenityInstance> amenities,
+            @JsonProperty("patents") Collection<Patent> patents
     ) {
         this.uniqueID = uniqueID;
         this.ownerID = ownerID;
@@ -68,6 +77,9 @@ public class Campsite {
         // Champ renommé « builtAmenities » : l'ancien « amenities » (noms d'enum)
         // devient une propriété inconnue ignorée → migration sans perte du camping.
         this.builtAmenities = new CopyOnWriteArrayList<>(amenities != null ? amenities : List.of());
+        this.patents = (patents == null || patents.isEmpty())
+                ? EnumSet.noneOf(Patent.class)
+                : EnumSet.copyOf(patents);
     }
 
     public void addActivity(Activity activity) {
@@ -92,6 +104,14 @@ public class Campsite {
 
     public void addAmenity(AmenityInstance amenity) {
         this.builtAmenities.add(amenity);
+    }
+
+    public boolean hasPatent(Patent patent) {
+        return this.patents.contains(patent);
+    }
+
+    public void addPatent(Patent patent) {
+        this.patents.add(patent);
     }
 
     public void addMoney(double amount) {

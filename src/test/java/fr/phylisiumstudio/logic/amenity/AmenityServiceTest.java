@@ -31,4 +31,13 @@ class AmenityServiceTest {
         campsite.addAmenity(new AmenityInstance(Amenity.SHOP, new Vector3d()));
         assertEquals(2 * AmenityService.COMFORT_PER_AMENITY, service.dailyComfortBonus(campsite));
     }
+
+    @Test
+    void comfortPlusPatentBoostsComfort() {
+        var campsite = new Campsite(UUID.randomUUID());
+        campsite.addAmenity(new AmenityInstance(Amenity.SHOWERS, new Vector3d()));
+        double before = service.dailyComfortBonus(campsite);
+        campsite.addPatent(fr.phylisiumstudio.logic.vendor.Patent.COMFORT_PLUS);
+        assertEquals(before * 1.5, service.dailyComfortBonus(campsite), 1e-9);
+    }
 }

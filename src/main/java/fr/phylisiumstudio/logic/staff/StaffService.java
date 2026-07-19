@@ -87,7 +87,9 @@ public class StaffService {
             if (role == null) {
                 continue;
             }
-            int capacity = capacity(staff.skill(role));
+            // Brevet « Staff efficace » : +1 tâche par employé.
+            int bonus = campsite.hasPatent(fr.phylisiumstudio.logic.vendor.Patent.EFFICIENT_STAFF) ? 1 : 0;
+            int capacity = capacity(staff.skill(role)) + bonus;
             switch (role) {
                 case RECEPTION -> welcomeClients(campsite, capacity);
                 case CLEANING -> cleanPlots(campsite, capacity);

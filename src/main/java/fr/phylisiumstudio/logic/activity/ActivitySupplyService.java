@@ -4,6 +4,7 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import fr.phylisiumstudio.logic.Campsite;
 import fr.phylisiumstudio.logic.economy.EconomyService;
+import fr.phylisiumstudio.logic.vendor.Patent;
 
 /**
  * Ravitaillement des activités consommant des fournitures (pêche, barbecue). Le
@@ -38,7 +39,9 @@ public class ActivitySupplyService {
         if (!activity.getType().consumesSupplies() || amount <= 0) {
             return 0;
         }
-        long cost = restockCost(activity, amount);
+        // Brevet « Fournitures éco » : coût des fournitures réduit de 30 %.
+        double factor = campsite.hasPatent(Patent.ECO_SUPPLIES) ? 0.7 : 1.0;
+        long cost = Math.round(restockCost(activity, amount) * factor);
         if (campsite.getMoney() < cost) {
             return 0;
         }

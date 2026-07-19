@@ -42,17 +42,20 @@ public class InteractionMenus {
     private final PlotDataService plotDataService;
     private final ActivityUpgradeService activityUpgradeService;
     private final ActivityDataService activityDataService;
+    private final fr.phylisiumstudio.app.vendor.VendorService vendorService;
 
     @Inject
     public InteractionMenus(MarketService marketService, SlotService slotService,
                             PlotUpgradeService upgradeService, PlotDataService plotDataService,
-                            ActivityUpgradeService activityUpgradeService, ActivityDataService activityDataService) {
+                            ActivityUpgradeService activityUpgradeService, ActivityDataService activityDataService,
+                            fr.phylisiumstudio.app.vendor.VendorService vendorService) {
         this.marketService = marketService;
         this.slotService = slotService;
         this.upgradeService = upgradeService;
         this.plotDataService = plotDataService;
         this.activityUpgradeService = activityUpgradeService;
         this.activityDataService = activityDataService;
+        this.vendorService = vendorService;
     }
 
     /** Clé de position stable (au bloc) pour identifier un slot. */
@@ -224,6 +227,24 @@ public class InteractionMenus {
                         at.consumesSupplies() ? "Consomme des fournitures, tarif plus élevé" : "Sans fourniture");
             }
             menu.line(ChatMenu.row(parts));
+        }
+        menu.footer().send(player);
+    }
+
+    public void openVendor(Player player, Campsite campsite) {
+        var offered = vendorService.offeredPatents(campsite.getUniqueID());
+        if (offered.isEmpty()) {
+            player.sendMessage(Component.text("Le marchand est déjà reparti.", NamedTextColor.RED));
+            return;
+        }
+        var menu = ChatMenu.titled("Marchand ambulant")
+                .text("Brevets — améliorations permanentes. Il repart bientôt !", NamedTextColor.GRAY)
+                .text("Solde : " + Math.round(campsite.getMoney()) + " $", NamedTextColor.GREEN)
+                .blank();
+        for (var patent : offered) {
+            menu.text(patent.displayName() + " — " + patent.description(), NamedTextColor.AQUA);
+            menu.line(ChatMenu.button("Acheter (" + patent.cost() + " $)", NamedTextColor.GREEN,
+                    "/patents buy " + patent.name(), patent.description()));
         }
         menu.footer().send(player);
     }

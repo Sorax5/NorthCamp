@@ -79,7 +79,10 @@ public class ArrivalService {
             availabilityFactor *= 0.3;
         }
 
-        return Math.clamp(BASE_CHANCE * reputationFactor * availabilityFactor, 0.0, 0.9);
+        // Brevet « Marketing » : +20 % de chance d'arrivée.
+        double marketing = campsite.hasPatent(fr.phylisiumstudio.logic.vendor.Patent.MARKETING) ? 1.2 : 1.0;
+
+        return Math.clamp(BASE_CHANCE * reputationFactor * availabilityFactor * marketing, 0.0, 0.9);
     }
 
     private int maxClients(Campsite campsite) {

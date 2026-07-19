@@ -51,7 +51,10 @@ public class RatingService {
      * grimpent avec l'étoile courante ({@code 1.0} à 0★, jusqu'à {@code 1.40} à 5★).
      */
     public static double priceMultiplier(Campsite campsite) {
-        return 1.0 + ratingOf(campsite) * STAR_PRICE_BONUS;
+        // Brevet « Marque premium » : bonus de prix par étoile renforcé.
+        double perStar = STAR_PRICE_BONUS
+                + (campsite.hasPatent(fr.phylisiumstudio.logic.vendor.Patent.PREMIUM_BRAND) ? 0.04 : 0.0);
+        return 1.0 + ratingOf(campsite) * perStar;
     }
 
     /** Rendu texte « ★★★☆☆ » pour un nombre d'étoiles donné. */

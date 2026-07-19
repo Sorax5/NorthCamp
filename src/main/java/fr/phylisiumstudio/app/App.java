@@ -10,6 +10,7 @@ import fr.phylisiumstudio.app.commands.CampCommand;
 import fr.phylisiumstudio.app.commands.ClientsCommand;
 import fr.phylisiumstudio.app.commands.LeaderboardCommand;
 import fr.phylisiumstudio.app.commands.MoneyCommand;
+import fr.phylisiumstudio.app.commands.PatentsCommand;
 import fr.phylisiumstudio.app.commands.PricingCommand;
 import fr.phylisiumstudio.app.commands.ShutdownCommand;
 import fr.phylisiumstudio.app.commands.SlotsCommand;
@@ -105,7 +106,11 @@ public class App implements IApplication {
     @Inject
     private AmenitiesCommand amenitiesCommand;
     @Inject
+    private PatentsCommand patentsCommand;
+    @Inject
     private ShutdownCommand shutdownCommand;
+    @Inject
+    private fr.phylisiumstudio.app.vendor.VendorService vendorService;
 
     @Inject
     private CampsiteView campsiteView;
@@ -284,6 +289,7 @@ public class App implements IApplication {
             commandManager.register(activitiesCommand);
             commandManager.register(slotsCommand);
             commandManager.register(amenitiesCommand);
+            commandManager.register(patentsCommand);
 
             registerMotd();
 
