@@ -4,7 +4,6 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import fr.phylisiumstudio.logic.Campsite;
 import fr.phylisiumstudio.logic.activity.Activity;
-import fr.phylisiumstudio.logic.client.Client;
 import fr.phylisiumstudio.logic.client.ClientLifecycle;
 import fr.phylisiumstudio.logic.clock.GamePhase;
 import fr.phylisiumstudio.logic.clock.event.PhaseChangeEvent;
@@ -17,7 +16,6 @@ import net.minestom.server.event.EventNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
 import java.util.Random;
 
 /**
@@ -34,13 +32,10 @@ import java.util.Random;
 public class GameplayLoopService {
     private static final Logger logger = LoggerFactory.getLogger(GameplayLoopService.class);
 
-    private static final int MIN_ARRIVALS = 1;
-    private static final int MAX_ARRIVALS = 8;
     /** Probabilité qu'une activité opérationnelle s'use et tombe en panne chaque jour. */
     private static final double ACTIVITY_DEGRADE_CHANCE = 0.25;
 
     private final ClientStayService stayService;
-    private final ArrivalGenerator arrivalGenerator;
     private final MarketService marketService;
     private final SatisfactionService satisfactionService;
     private final SeasonService seasonService;
@@ -49,14 +44,12 @@ public class GameplayLoopService {
 
     @Inject
     public GameplayLoopService(ClientStayService stayService,
-                               ArrivalGenerator arrivalGenerator,
                                MarketService marketService,
                                SatisfactionService satisfactionService,
                                SeasonService seasonService,
                                StaffService staffService,
                                Random random) {
         this.stayService = stayService;
-        this.arrivalGenerator = arrivalGenerator;
         this.marketService = marketService;
         this.satisfactionService = satisfactionService;
         this.seasonService = seasonService;
@@ -77,12 +70,11 @@ public class GameplayLoopService {
     }
 
     /**
-     * Applique la routine du lever du jour à un camping. Extrait de l'écoute
-     * d'événement pour rester directement testable.
-     *
-     * @return les clients nouvellement arrivés à l'accueil.
+     * Applique la routine du lever du jour à un camping (départs, abandons,
+     * usure, réputation, salaires). Les arrivées, elles, se font en continu
+     * pendant la journée via {@link ArrivalService}.
      */
-    public List<Client> openNewDay(Campsite campsite, long dayNumber) {
+    public void openNewDay(Campsite campsite, long dayNumber) {
         marketService.fluctuate();
         degradeActivities(campsite);
 
@@ -115,19 +107,15 @@ public class GameplayLoopService {
             satisfactionService.applyDeparture(campsite, client);
         }
 
-        var arrivals = arrivalGenerator.generate(arrivalCount(campsite, dayNumber));
-        campsite.getClients().addAll(arrivals);
-
         // Les employés travaillent : salaires prélevés, puis accueil/nettoyage/maintenance.
         double salaries = staffService.paySalaries(campsite);
         staffService.runAutomation(campsite);
 
-        logger.info("Day {} ({}{}) for campsite {}: {} departures, {} abandoned, {} arrivals, {} salaries (reputation {})",
+        logger.info("Day {} ({}{}) for campsite {}: {} departures, {} abandoned, {} salaries (reputation {})",
                 dayNumber, seasonService.seasonOf(dayNumber).displayName(),
                 seasonService.isSpecialEvent(dayNumber) ? " - événement spécial" : "",
-                campsite.getUniqueID(), departing.size(), abandoned, arrivals.size(),
+                campsite.getUniqueID(), departing.size(), abandoned,
                 salaries, Math.round(campsite.getReputation()));
-        return arrivals;
     }
 
     /** Usure quotidienne : chaque activité opérationnelle peut tomber en panne. */
@@ -139,12 +127,4 @@ public class GameplayLoopService {
         }
     }
 
-    /** Nombre d'arrivées du jour, modulé par la réputation du camping et la saison. */
-    private int arrivalCount(Campsite campsite, long dayNumber) {
-        double reputationFactor = campsite.getReputation() / 100.0;
-        int range = MAX_ARRIVALS - MIN_ARRIVALS;
-        int scaledMax = MIN_ARRIVALS + (int) Math.round(range * reputationFactor);
-        int base = MIN_ARRIVALS + random.nextInt(Math.max(1, scaledMax - MIN_ARRIVALS + 1));
-        return (int) Math.round(base * seasonService.arrivalMultiplier(dayNumber));
-    }
 }
