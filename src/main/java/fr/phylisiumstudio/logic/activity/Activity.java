@@ -33,6 +33,9 @@ public class Activity {
     /** Fournitures en stock (appât, charbon…), consommées à chaque passage si le type l'exige. */
     private int supplies = 0;
 
+    /** Passages accumulés depuis la dernière maintenance ; l'usure finit par mettre en panne. */
+    private int usage = 0;
+
     /** Activité opérationnelle : indisponible tant qu'un employé ne l'a pas entretenue. */
     private boolean operational = true;
 
@@ -69,6 +72,30 @@ public class Activity {
 
     public void removeClient(Client client) {
         currentClients.remove(client);
+    }
+
+    /** Nombre de passages avant panne pour usure (depuis la dernière maintenance). */
+    public static final int WEAR_THRESHOLD = 15;
+
+    /**
+     * Enregistre un passage client : incrémente l'usure et, au seuil, met l'activité
+     * en panne (elle devra être entretenue par la maintenance).
+     *
+     * @return {@code true} si ce passage vient de provoquer la panne.
+     */
+    public boolean recordUsage() {
+        usage++;
+        if (operational && usage >= WEAR_THRESHOLD) {
+            operational = false;
+            return true;
+        }
+        return false;
+    }
+
+    /** Remet l'activité en service et réinitialise l'usure (maintenance). */
+    public void repair() {
+        this.operational = true;
+        this.usage = 0;
     }
 
     /** L'activité a-t-elle de quoi fonctionner (stock suffisant, ou type sans consommable) ? */

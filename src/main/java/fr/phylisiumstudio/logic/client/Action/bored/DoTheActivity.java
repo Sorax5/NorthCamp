@@ -56,6 +56,8 @@ public class DoTheActivity extends TimedLeafTask {
         double earned = EconomyService.collectActivityIncome(campsite, client, activity.getPrice());
         SatisfactionService.applyActivityEnjoyed(client, activity.getType());
         Effects.moneyPopup(entity.getInstance(), entity.getPosition(), earned);
+        // Usure : trop de passages finissent par mettre l'activité en panne.
+        activity.recordUsage();
         return true;
     }
 

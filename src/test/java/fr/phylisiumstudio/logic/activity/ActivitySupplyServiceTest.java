@@ -51,6 +51,22 @@ class ActivitySupplyServiceTest {
     }
 
     @Test
+    void usageWearsActivityDownUntilItBreaksThenRepairResets() {
+        var activity = of(ActivityType.SWIM);
+        for (int i = 0; i < Activity.WEAR_THRESHOLD - 1; i++) {
+            assertFalse(activity.recordUsage());
+            assertTrue(activity.isOperational());
+        }
+        // Le passage au seuil déclenche la panne.
+        assertTrue(activity.recordUsage());
+        assertFalse(activity.isOperational());
+
+        activity.repair();
+        assertTrue(activity.isOperational());
+        assertEquals(0, activity.getUsage());
+    }
+
+    @Test
     void restockRejectsNonConsumableOrInsufficientFunds() {
         var campsite = new Campsite(UUID.randomUUID());
         campsite.addMoney(10);

@@ -48,7 +48,7 @@ public class StaffFactory {
         var name = NAMES.get(random.nextInt(NAMES.size()));
         var look = random.nextBoolean() ? StaffLook.VARIANT_A : StaffLook.VARIANT_B;
 
-        return new Staff(UUID.randomUUID(), name, skills, salary, look, specialty);
+        return new Staff(UUID.randomUUID(), name, skills, salary, look, specialty, null);
     }
 
     public List<Staff> generateCandidates(int count) {

@@ -58,6 +58,12 @@ public class StaffCommand extends Command {
             showMenu(sender);
         }), ArgumentType.Literal("assign"), idArg, roleArg);
 
+        var activityIdArg = ArgumentType.Word("activityId");
+        addSyntax((sender, ctx) -> withCampsite(sender, campsite -> {
+            assignSupply(campsite, UUID.fromString(ctx.get(idArg)), UUID.fromString(ctx.get(activityIdArg)));
+            showMenu(sender);
+        }), ArgumentType.Literal("supply"), idArg, activityIdArg);
+
         addSyntax((sender, ctx) -> withCampsite(sender, campsite -> {
             staffMarket.refresh(campsite.getUniqueID());
             showMenu(sender);
@@ -125,6 +131,9 @@ public class StaffCommand extends Command {
             for (var staff : campsite.getStaff()) {
                 menu.line(describe(staff, true));
                 menu.line(assignRow(staff));
+                if (!campsite.getActivities().isEmpty()) {
+                    menu.line(supplyRow(campsite, staff));
+                }
             }
         }
 
@@ -169,6 +178,22 @@ public class StaffCommand extends Command {
         return builder.append(row).append(Component.text("  ")).append(locate);
     }
 
+    /** Boutons pour affecter l'employé au ravitaillement d'une des activités du camping. */
+    private Component supplyRow(Campsite campsite, Staff staff) {
+        var activities = campsite.getActivities();
+        var parts = new java.util.ArrayList<Component>();
+        for (var activity : activities) {
+            boolean current = activity.getUniqueID().equals(staff.getAssignedActivityId());
+            parts.add(ChatMenu.button(activity.getType().displayName(),
+                    current ? NamedTextColor.GREEN : NamedTextColor.WHITE,
+                    "/staff supply " + staff.getUniqueId() + " " + activity.getUniqueID(),
+                    "Ravitailler " + activity.getType().displayName() + " (compétence "
+                            + pct(staff.skill(StaffRole.SUPPLY)) + ")"));
+        }
+        return Component.text("  Ravit. : ", NamedTextColor.DARK_GRAY)
+                .append(ChatMenu.row(parts.toArray(new Component[0])));
+    }
+
     private void recruit(Campsite campsite, UUID candidateId) {
         staffMarket.candidates(campsite.getUniqueID()).stream()
                 .filter(s -> s.getUniqueId().equals(candidateId))
@@ -183,7 +208,29 @@ public class StaffCommand extends Command {
         campsite.getStaff().stream()
                 .filter(s -> s.getUniqueId().equals(staffId))
                 .findFirst()
-                .ifPresent(s -> s.setAssignedRole(role));
+                .ifPresent(s -> {
+                    s.setAssignedRole(role);
+                    // Changer pour un autre rôle détache l'activité de ravitaillement.
+                    if (role != StaffRole.SUPPLY) {
+                        s.setAssignedActivityId(null);
+                    }
+                });
+    }
+
+    /** Affecte l'employé au ravitaillement d'une activité précise. */
+    private void assignSupply(Campsite campsite, UUID staffId, UUID activityId) {
+        boolean activityExists = campsite.getActivities().stream()
+                .anyMatch(a -> a.getUniqueID().equals(activityId));
+        if (!activityExists) {
+            return;
+        }
+        campsite.getStaff().stream()
+                .filter(s -> s.getUniqueId().equals(staffId))
+                .findFirst()
+                .ifPresent(s -> {
+                    s.setAssignedRole(StaffRole.SUPPLY);
+                    s.setAssignedActivityId(activityId);
+                });
     }
 
     private static String topRole(Staff staff) {

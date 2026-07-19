@@ -3,6 +3,8 @@ package fr.phylisiumstudio.logic.staff;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import fr.phylisiumstudio.logic.Campsite;
+import fr.phylisiumstudio.logic.activity.Activity;
+import fr.phylisiumstudio.logic.activity.ActivitySupplyService;
 import fr.phylisiumstudio.logic.client.Client;
 import fr.phylisiumstudio.logic.client.ClientLifecycle;
 import fr.phylisiumstudio.logic.economy.CheckInService;
@@ -32,21 +34,28 @@ public class StaffService {
      * gagne passivement — stratégie dégénérée).
      */
     private static final double FINANCE_DAILY_CAP = 500.0;
+    /** En dessous de ce stock, un employé au ravitaillement réapprovisionne son activité. */
+    private static final int SUPPLY_LOW_THRESHOLD = 5;
+    /** Stock cible atteint après un réapprovisionnement. */
+    private static final int SUPPLY_TARGET_STOCK = 15;
 
     private final PlotAssignmentService assignmentService;
     private final ClientStayService stayService;
     private final CheckInService checkInService;
     private final EconomyService economyService;
+    private final ActivitySupplyService supplyService;
 
     @Inject
     public StaffService(PlotAssignmentService assignmentService,
                         ClientStayService stayService,
                         CheckInService checkInService,
-                        EconomyService economyService) {
+                        EconomyService economyService,
+                        ActivitySupplyService supplyService) {
         this.assignmentService = assignmentService;
         this.stayService = stayService;
         this.checkInService = checkInService;
         this.economyService = economyService;
+        this.supplyService = supplyService;
     }
 
     public void hire(Campsite campsite, Staff staff) {
@@ -83,6 +92,7 @@ public class StaffService {
                 case RECEPTION -> welcomeClients(campsite, capacity);
                 case CLEANING -> cleanPlots(campsite, capacity);
                 case MAINTENANCE -> maintainActivities(campsite, capacity);
+                case SUPPLY -> restockAssignedActivity(campsite, staff);
                 case FINANCE -> applyFinanceYield(campsite, staff.skill(StaffRole.FINANCE));
             }
         }
@@ -140,9 +150,29 @@ public class StaffService {
                 break;
             }
             if (!activity.isOperational()) {
-                activity.setOperational(true);
+                activity.repair();
                 done++;
             }
+        }
+    }
+
+    /**
+     * Ravitaillement ciblé : l'employé réapprovisionne l'unique activité qui lui est
+     * assignée si son stock passe sous le seuil bas (achat des fournitures manquantes).
+     */
+    private void restockAssignedActivity(Campsite campsite, Staff staff) {
+        var activityId = staff.getAssignedActivityId();
+        if (activityId == null) {
+            return;
+        }
+        Activity activity = campsite.getActivities().stream()
+                .filter(a -> a.getUniqueID().equals(activityId))
+                .findFirst().orElse(null);
+        if (activity == null || !activity.getType().consumesSupplies()) {
+            return;
+        }
+        if (activity.getSupplies() < SUPPLY_LOW_THRESHOLD) {
+            supplyService.restock(campsite, activity, SUPPLY_TARGET_STOCK - activity.getSupplies());
         }
     }
 }

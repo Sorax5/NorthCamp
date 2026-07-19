@@ -52,7 +52,7 @@ public class ActivitiesCommand extends Command {
         }), ArgumentType.Literal("restock"), idArg, restockArg);
 
         addSyntax((sender, ctx) -> withActivity(sender, UUID.fromString(ctx.get(idArg)), activity -> {
-            activity.setOperational(true);
+            activity.repair();
             showMenu(sender);
         }), ArgumentType.Literal("repair"), idArg);
 

@@ -11,6 +11,8 @@ public enum StaffRole {
     CLEANING("Nettoyage"),
     /** Maintenance : entretient les activités pour les garder disponibles. */
     MAINTENANCE("Maintenance"),
+    /** Ravitaillement : réapprovisionne une activité précise en fournitures. */
+    SUPPLY("Ravitaillement"),
     /** Finance : optimise les opérations monétaires. */
     FINANCE("Finance");
 

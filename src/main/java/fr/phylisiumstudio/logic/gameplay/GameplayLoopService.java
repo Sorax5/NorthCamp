@@ -3,7 +3,6 @@ package fr.phylisiumstudio.logic.gameplay;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import fr.phylisiumstudio.logic.Campsite;
-import fr.phylisiumstudio.logic.activity.Activity;
 import fr.phylisiumstudio.logic.client.ClientLifecycle;
 import fr.phylisiumstudio.logic.clock.GamePhase;
 import fr.phylisiumstudio.logic.clock.event.PhaseChangeEvent;
@@ -28,7 +27,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Map;
-import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -46,8 +44,6 @@ import java.util.concurrent.ConcurrentHashMap;
 public class GameplayLoopService {
     private static final Logger logger = LoggerFactory.getLogger(GameplayLoopService.class);
 
-    /** Probabilité qu'une activité opérationnelle s'use et tombe en panne chaque jour. */
-    private static final double ACTIVITY_DEGRADE_CHANCE = 0.25;
     /** Prime versée par étoile lorsqu'un camping atteint un nouveau palier de note. */
     private static final double STAR_MILESTONE_REWARD_PER_STAR = 500.0;
 
@@ -62,7 +58,6 @@ public class GameplayLoopService {
     private final EventService eventService;
     private final SolvencyService solvencyService;
     private final AmenityService amenityService;
-    private final Random random;
 
     /** Solde de chaque camping au matin précédent, pour calculer le bénéfice du jour. */
     private final Map<UUID, Double> lastMorningMoney = new ConcurrentHashMap<>();
@@ -80,8 +75,7 @@ public class GameplayLoopService {
                                RatingService ratingService,
                                EventService eventService,
                                SolvencyService solvencyService,
-                               AmenityService amenityService,
-                               Random random) {
+                               AmenityService amenityService) {
         this.stayService = stayService;
         this.marketService = marketService;
         this.satisfactionService = satisfactionService;
@@ -93,7 +87,6 @@ public class GameplayLoopService {
         this.eventService = eventService;
         this.solvencyService = solvencyService;
         this.amenityService = amenityService;
-        this.random = random;
 
         // Nœud dédié attaché à la racine : regroupe la logique de la boucle et
         // reflète la structure du serveur plutôt que d'empiler sur le handler global.
@@ -143,7 +136,6 @@ public class GameplayLoopService {
         double previousMorning = lastMorningMoney.getOrDefault(campsite.getUniqueID(), campsite.getMoney());
 
         marketService.fluctuate();
-        degradeActivities(campsite);
 
         // Événement du jour (orage, ours, festival) : peut fermer les activités,
         // effrayer les campeurs ou doper la réputation.
@@ -301,13 +293,5 @@ public class GameplayLoopService {
         }
     }
 
-    /** Usure quotidienne : chaque activité opérationnelle peut tomber en panne. */
-    private void degradeActivities(Campsite campsite) {
-        for (Activity activity : campsite.getActivities()) {
-            if (activity.isOperational() && random.nextDouble() < ACTIVITY_DEGRADE_CHANCE) {
-                activity.setOperational(false);
-            }
-        }
-    }
 
 }
