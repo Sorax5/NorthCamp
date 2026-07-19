@@ -42,6 +42,7 @@ public class CampsiteView {
     private final List<PlaceInfoView> placeInfoViews;
     private final List<SlotView> slotViews;
     private final java.util.Map<java.util.UUID, SidebarView> sidebars = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.Map<java.util.UUID, ObjectivesView> objectives = new java.util.concurrent.ConcurrentHashMap<>();
     private final CampsiteService campsiteService;
     private final InstanceService instanceService;
     private final GameClockService gameClockService;
@@ -98,8 +99,10 @@ public class CampsiteView {
 
             // PlayerSpawnEvent peut se répéter (respawn, changement d'instance) :
             // ne créer la sidebar qu'une fois pour éviter d'orpheliner sa tâche.
-            campsiteService.getCampsiteByOwner(player.getUuid()).ifPresent(campsite ->
-                    sidebars.computeIfAbsent(player.getUuid(), uuid -> new SidebarView(player, campsite)));
+            campsiteService.getCampsiteByOwner(player.getUuid()).ifPresent(campsite -> {
+                sidebars.computeIfAbsent(player.getUuid(), uuid -> new SidebarView(player, campsite));
+                objectives.computeIfAbsent(player.getUuid(), uuid -> new ObjectivesView(player, campsite));
+            });
         });
         MinecraftServer.getGlobalEventHandler().addChild(node);
     }
@@ -141,6 +144,11 @@ public class CampsiteView {
         var sidebar = sidebars.remove(player.getUuid());
         if (sidebar != null) {
             sidebar.dispose();
+        }
+
+        var objective = objectives.remove(player.getUuid());
+        if (objective != null) {
+            objective.dispose();
         }
 
         var playerInstance = player.getInstance();
