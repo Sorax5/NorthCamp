@@ -11,12 +11,19 @@ import fr.phylisiumstudio.logic.economy.MarketService;
 import fr.phylisiumstudio.logic.economy.SatisfactionService;
 import fr.phylisiumstudio.logic.season.SeasonService;
 import fr.phylisiumstudio.logic.staff.StaffService;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.event.EventNode;
+import net.minestom.server.instance.Instance;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Map;
 import java.util.Random;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Orchestre la boucle de gameplay quotidienne en réagissant aux transitions de
@@ -42,6 +49,9 @@ public class GameplayLoopService {
     private final StaffService staffService;
     private final Random random;
 
+    /** Solde de chaque camping au matin précédent, pour calculer le bénéfice du jour. */
+    private final Map<UUID, Double> lastMorningMoney = new ConcurrentHashMap<>();
+
     @Inject
     public GameplayLoopService(ClientStayService stayService,
                                MarketService marketService,
@@ -65,7 +75,8 @@ public class GameplayLoopService {
 
     private void onPhaseChange(PhaseChangeEvent event) {
         if (event.phase() == GamePhase.DAY) {
-            openNewDay(event.campsite(), event.dayNumber());
+            var summary = openNewDay(event.campsite(), event.dayNumber());
+            renderSummary(event.getInstance(), summary);
         }
     }
 
@@ -74,7 +85,10 @@ public class GameplayLoopService {
      * usure, réputation, salaires). Les arrivées, elles, se font en continu
      * pendant la journée via {@link ArrivalService}.
      */
-    public void openNewDay(Campsite campsite, long dayNumber) {
+    public DaySummary openNewDay(Campsite campsite, long dayNumber) {
+        // Solde de référence : matin précédent (ou solde actuel au tout premier jour).
+        double previousMorning = lastMorningMoney.getOrDefault(campsite.getUniqueID(), campsite.getMoney());
+
         marketService.fluctuate();
         degradeActivities(campsite);
 
@@ -115,11 +129,55 @@ public class GameplayLoopService {
         double salaries = staffService.paySalaries(campsite);
         staffService.runAutomation(campsite);
 
-        logger.info("Day {} ({}{}) for campsite {}: {} departures, {} abandoned, {} salaries (reputation {})",
+        // Bénéfice du jour = variation de solde depuis le matin précédent.
+        double net = campsite.getMoney() - previousMorning;
+        lastMorningMoney.put(campsite.getUniqueID(), campsite.getMoney());
+
+        long campers = campsite.getClients().stream()
+                .filter(c -> c.getLifecycle() == ClientLifecycle.STAYING).count();
+        long queue = campsite.getClients().stream()
+                .filter(c -> c.getLifecycle() == ClientLifecycle.WAITING).count();
+
+        logger.info("Day {} ({}{}) for campsite {}: {} departures, {} abandoned, {} salaries, net {} (reputation {})",
                 dayNumber, seasonService.seasonOf(dayNumber).displayName(),
                 seasonService.isSpecialEvent(dayNumber) ? " - événement spécial" : "",
                 campsite.getUniqueID(), departing.size(), abandoned,
-                salaries, Math.round(campsite.getReputation()));
+                salaries, Math.round(net), Math.round(campsite.getReputation()));
+
+        return new DaySummary(dayNumber, seasonService.seasonOf(dayNumber).displayName(),
+                seasonService.isSpecialEvent(dayNumber), departing.size(), abandoned,
+                salaries, net, campsite.getMoney(), campsite.getReputation(), campers, queue);
+    }
+
+    /** Affiche le bilan du matin aux joueurs de l'instance du camping. */
+    private void renderSummary(Instance instance, DaySummary s) {
+        if (instance == null) {
+            return;
+        }
+        var sep = Component.text("──────────────────────────", NamedTextColor.DARK_GRAY);
+        var title = Component.text("☀ Bilan — Jour " + s.dayNumber() + " (" + s.season() + ")"
+                + (s.specialEvent() ? " ★ événement" : ""), NamedTextColor.GOLD, TextDecoration.BOLD);
+
+        var netColor = s.net() >= 0 ? NamedTextColor.GREEN : NamedTextColor.RED;
+        var netText = (s.net() >= 0 ? "+" : "") + Math.round(s.net()) + " $";
+
+        instance.sendMessage(sep);
+        instance.sendMessage(title);
+        instance.sendMessage(line("Bénéfice du jour", netText, netColor));
+        instance.sendMessage(line("Salaires versés", "-" + Math.round(s.salaries()) + " $", NamedTextColor.YELLOW));
+        instance.sendMessage(line("Départs / abandons", s.departures() + " / " + s.abandoned(),
+                s.abandoned() > 0 ? NamedTextColor.RED : NamedTextColor.GRAY));
+        instance.sendMessage(line("Campeurs / file", s.campers() + " / " + s.queue(), NamedTextColor.AQUA));
+        instance.sendMessage(line("Solde", Math.round(s.money()) + " $", NamedTextColor.GREEN));
+        instance.sendMessage(line("Réputation", Math.round(s.reputation()) + " / 100", NamedTextColor.LIGHT_PURPLE));
+        instance.sendMessage(sep);
+    }
+
+    private static Component line(String label, String value, NamedTextColor valueColor) {
+        return Component.text()
+                .append(Component.text(label + " : ", NamedTextColor.GRAY))
+                .append(Component.text(value, valueColor))
+                .build();
     }
 
     /** Usure quotidienne : chaque activité opérationnelle peut tomber en panne. */
