@@ -18,6 +18,8 @@ public record DaySummary(
         double money,
         double reputation,
         long campers,
-        long queue
+        long queue,
+        int stars,
+        boolean starMilestone
 ) {
 }

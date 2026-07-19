@@ -10,6 +10,7 @@ import fr.phylisiumstudio.logic.clock.event.PhaseChangeEvent;
 import fr.phylisiumstudio.logic.economy.MarketService;
 import fr.phylisiumstudio.logic.economy.SatisfactionService;
 import fr.phylisiumstudio.logic.plot.PlotUpgradeService;
+import fr.phylisiumstudio.logic.rating.RatingService;
 import fr.phylisiumstudio.logic.season.SeasonService;
 import fr.phylisiumstudio.logic.service.PlotDataService;
 import fr.phylisiumstudio.logic.staff.StaffService;
@@ -43,6 +44,8 @@ public class GameplayLoopService {
 
     /** Probabilité qu'une activité opérationnelle s'use et tombe en panne chaque jour. */
     private static final double ACTIVITY_DEGRADE_CHANCE = 0.25;
+    /** Prime versée par étoile lorsqu'un camping atteint un nouveau palier de note. */
+    private static final double STAR_MILESTONE_REWARD_PER_STAR = 500.0;
 
     private final ClientStayService stayService;
     private final MarketService marketService;
@@ -51,10 +54,13 @@ public class GameplayLoopService {
     private final StaffService staffService;
     private final PlotDataService plotDataService;
     private final PlotUpgradeService plotUpgradeService;
+    private final RatingService ratingService;
     private final Random random;
 
     /** Solde de chaque camping au matin précédent, pour calculer le bénéfice du jour. */
     private final Map<UUID, Double> lastMorningMoney = new ConcurrentHashMap<>();
+    /** Meilleur palier d'étoiles déjà atteint par camping, pour ne récompenser qu'une fois. */
+    private final Map<UUID, Integer> bestStars = new ConcurrentHashMap<>();
 
     @Inject
     public GameplayLoopService(ClientStayService stayService,
@@ -64,6 +70,7 @@ public class GameplayLoopService {
                                StaffService staffService,
                                PlotDataService plotDataService,
                                PlotUpgradeService plotUpgradeService,
+                               RatingService ratingService,
                                Random random) {
         this.stayService = stayService;
         this.marketService = marketService;
@@ -72,6 +79,7 @@ public class GameplayLoopService {
         this.staffService = staffService;
         this.plotDataService = plotDataService;
         this.plotUpgradeService = plotUpgradeService;
+        this.ratingService = ratingService;
         this.random = random;
 
         // Nœud dédié attaché à la racine : regroupe la logique de la boucle et
@@ -140,6 +148,14 @@ public class GameplayLoopService {
         double salaries = staffService.paySalaries(campsite);
         staffService.runAutomation(campsite);
 
+        // Note en étoiles : un nouveau palier atteint verse une prime (inclus dans le bénéfice).
+        int stars = ratingService.stars(campsite);
+        boolean milestone = stars > bestStars.getOrDefault(campsite.getUniqueID(), 0);
+        if (milestone) {
+            bestStars.put(campsite.getUniqueID(), stars);
+            campsite.addMoney(STAR_MILESTONE_REWARD_PER_STAR * stars);
+        }
+
         // Bénéfice du jour = variation de solde depuis le matin précédent.
         double net = campsite.getMoney() - previousMorning;
         lastMorningMoney.put(campsite.getUniqueID(), campsite.getMoney());
@@ -157,7 +173,8 @@ public class GameplayLoopService {
 
         return new DaySummary(dayNumber, seasonService.seasonOf(dayNumber).displayName(),
                 seasonService.isSpecialEvent(dayNumber), departing.size(), abandoned,
-                salaries, net, campsite.getMoney(), campsite.getReputation(), campers, queue);
+                salaries, net, campsite.getMoney(), campsite.getReputation(), campers, queue,
+                stars, milestone);
     }
 
     /** Affiche le bilan du matin aux joueurs de l'instance du camping. */
@@ -181,6 +198,12 @@ public class GameplayLoopService {
         instance.sendMessage(line("Campeurs / file", s.campers() + " / " + s.queue(), NamedTextColor.AQUA));
         instance.sendMessage(line("Solde", Math.round(s.money()) + " $", NamedTextColor.GREEN));
         instance.sendMessage(line("Réputation", Math.round(s.reputation()) + " / 100", NamedTextColor.LIGHT_PURPLE));
+        instance.sendMessage(line("Note", RatingService.render(s.stars()), NamedTextColor.GOLD));
+        if (s.starMilestone()) {
+            instance.sendMessage(Component.text("★ Nouveau palier ! Prime de "
+                    + Math.round(STAR_MILESTONE_REWARD_PER_STAR * s.stars()) + " $ versée.",
+                    NamedTextColor.GOLD, TextDecoration.BOLD));
+        }
         instance.sendMessage(sep);
     }
 
