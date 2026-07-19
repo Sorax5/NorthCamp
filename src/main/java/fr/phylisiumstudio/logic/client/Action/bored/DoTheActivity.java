@@ -3,6 +3,7 @@ package fr.phylisiumstudio.logic.client.Action.bored;
 import com.badlogic.gdx.ai.btree.Task;
 import fr.phylisiumstudio.logic.client.Action.TimedLeafTask;
 import fr.phylisiumstudio.logic.client.ClientEntity;
+import fr.phylisiumstudio.logic.effect.Effects;
 
 import java.time.Duration;
 
@@ -51,10 +52,13 @@ public class DoTheActivity extends TimedLeafTask {
     @Override
     protected void onEnd() {
         var memory = getObject().getMemory();
+        var entity = getObject();
         var activity = memory.getCurrentActivity();
 
         memory.setCurrentActivity(null);
         activity.removeClient(memory.getClient());
+
+        Effects.activityDone(entity.getInstance(), entity.getPosition());
     }
 
     @Override

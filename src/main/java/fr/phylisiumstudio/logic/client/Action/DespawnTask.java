@@ -4,6 +4,7 @@ import com.badlogic.gdx.ai.btree.LeafTask;
 import com.badlogic.gdx.ai.btree.Task;
 import fr.phylisiumstudio.logic.client.ClientEntity;
 import fr.phylisiumstudio.logic.client.ClientLifecycle;
+import fr.phylisiumstudio.logic.effect.Effects;
 
 /**
  * Fait disparaître le NPC une fois arrivé à la sortie : marque le client comme
@@ -15,6 +16,7 @@ public class DespawnTask extends LeafTask<ClientEntity> {
     public Status execute() {
         var entity = getObject();
         entity.getMemory().getClient().setLifecycle(ClientLifecycle.GONE);
+        Effects.leaving(entity.getInstance(), entity.getPosition());
         entity.remove();
         return Status.SUCCEEDED;
     }
