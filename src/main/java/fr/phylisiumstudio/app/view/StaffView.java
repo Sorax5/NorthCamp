@@ -1,5 +1,6 @@
 package fr.phylisiumstudio.app.view;
 
+import fr.phylisiumstudio.app.interact.InteractionTags;
 import fr.phylisiumstudio.logic.Campsite;
 import fr.phylisiumstudio.logic.clock.event.PhaseChangeEvent;
 import fr.phylisiumstudio.logic.mapper.PositionMapper;
@@ -72,6 +73,8 @@ public class StaffView {
         var skin = skinLibrary.staffSkin(staff.getLook()).orElse(null);
         var spawnPos = new Vector3d(staffOrigin).add(index * 2.0, 0, 0);
         var entity = new StaffEntity(staff, skin, campsite, brain, reception);
+        entity.setTag(InteractionTags.KIND, InteractionTags.STAFF);
+        entity.setTag(InteractionTags.ID, staff.getUniqueId().toString());
         entity.setInstance(instance, PositionMapper.toMinestomPos(spawnPos));
         return entity;
     }

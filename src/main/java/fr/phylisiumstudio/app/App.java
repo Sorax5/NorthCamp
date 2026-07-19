@@ -16,6 +16,7 @@ import fr.phylisiumstudio.app.commands.StaffCommand;
 import fr.phylisiumstudio.app.config.MainConfig;
 import fr.phylisiumstudio.app.inject.AppModule;
 import fr.phylisiumstudio.app.inject.GuiceHandlerInstantiator;
+import fr.phylisiumstudio.app.interact.InteractionService;
 import fr.phylisiumstudio.app.json.JacksonConfig;
 import fr.phylisiumstudio.app.view.CampsiteView;
 import fr.phylisiumstudio.logic.IApplication;
@@ -108,6 +109,8 @@ public class App implements IApplication {
     private SkinLibrary skinLibrary;
     @Inject
     private LayoutService layoutService;
+    @Inject
+    private InteractionService interactionService;
     private SparkMinestom spark;
 
     public App() {

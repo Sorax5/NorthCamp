@@ -73,13 +73,13 @@ public class ArrivalService {
         long waiting = campsite.getClients().stream()
                 .filter(c -> c.getLifecycle() == ClientLifecycle.WAITING).count();
 
-        double reputationFactor = 0.5 + campsite.getReputation() / 100.0;   // 0.5–1.5
-        double availabilityFactor = free > 0 ? 1.0 : 0.3;                    // peu viennent si rien de libre
+        double reputationFactor = 0.5 + campsite.getReputation() / 100.0;
+        double availabilityFactor = free > 0 ? 1.0 : 0.3;
         if (waiting > free + 5) {
-            availabilityFactor *= 0.3;                                       // file engorgée : on se décourage
+            availabilityFactor *= 0.3;
         }
 
-        return Math.max(0.0, Math.min(0.9, BASE_CHANCE * reputationFactor * availabilityFactor));
+        return Math.clamp(BASE_CHANCE * reputationFactor * availabilityFactor, 0.0, 0.9);
     }
 
     private int maxClients(Campsite campsite) {
