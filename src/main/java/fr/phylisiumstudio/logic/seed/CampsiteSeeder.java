@@ -5,7 +5,6 @@ import com.google.inject.Singleton;
 import fr.phylisiumstudio.logic.Campsite;
 import fr.phylisiumstudio.logic.activity.Activity;
 import fr.phylisiumstudio.logic.activity.ActivityType;
-import fr.phylisiumstudio.logic.client.Client;
 import fr.phylisiumstudio.logic.economy.MarketService;
 import fr.phylisiumstudio.logic.plot.Plot;
 import fr.phylisiumstudio.logic.plot.PlotType;
@@ -50,13 +49,13 @@ public class CampsiteSeeder {
         }
         seedPlots(campsite);
         seedActivities(campsite);
-        seedClients(campsite);
         seedStaff(campsite);
         campsite.addMoney(STARTING_MONEY);
 
-        logger.info("Seeded demo campsite {}: {} plots, {} activities, {} clients, {} staff",
+        // Aucun client seedé : ils arrivent progressivement (ArrivalService).
+        logger.info("Seeded demo campsite {}: {} plots, {} activities, {} staff",
                 campsite.getUniqueID(), campsite.getPlots().size(), campsite.getActivities().size(),
-                campsite.getClients().size(), campsite.getStaff().size());
+                campsite.getStaff().size());
     }
 
     private void seedPlots(Campsite campsite) {
@@ -84,17 +83,6 @@ public class CampsiteSeeder {
             campsite.addActivity(activity);
             i++;
         }
-    }
-
-    private void seedClients(Campsite campsite) {
-        // Tous les emplacements démarrent vides : c'est la file d'attente et les
-        // employés qui remplissent le camping au fil de la simulation.
-        campsite.addClient(new Client(1, 2, 150));
-        campsite.addClient(new Client(1, 4, 320));
-        campsite.addClient(new Client(2, 3, 450));
-        campsite.addClient(new Client(3, 3, 600));
-        campsite.addClient(new Client(4, 2, 700));
-        campsite.addClient(new Client(1, 5, 400));
     }
 
     private void seedStaff(Campsite campsite) {
