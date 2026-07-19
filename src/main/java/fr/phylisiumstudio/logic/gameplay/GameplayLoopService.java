@@ -9,6 +9,7 @@ import fr.phylisiumstudio.logic.clock.GamePhase;
 import fr.phylisiumstudio.logic.clock.event.PhaseChangeEvent;
 import fr.phylisiumstudio.logic.economy.MarketService;
 import fr.phylisiumstudio.logic.economy.SatisfactionService;
+import fr.phylisiumstudio.logic.economy.SolvencyService;
 import fr.phylisiumstudio.logic.plot.PlotUpgradeService;
 import fr.phylisiumstudio.logic.rating.RatingService;
 import fr.phylisiumstudio.logic.season.SeasonService;
@@ -56,6 +57,7 @@ public class GameplayLoopService {
     private final PlotUpgradeService plotUpgradeService;
     private final RatingService ratingService;
     private final EventService eventService;
+    private final SolvencyService solvencyService;
     private final Random random;
 
     /** Solde de chaque camping au matin précédent, pour calculer le bénéfice du jour. */
@@ -73,6 +75,7 @@ public class GameplayLoopService {
                                PlotUpgradeService plotUpgradeService,
                                RatingService ratingService,
                                EventService eventService,
+                               SolvencyService solvencyService,
                                Random random) {
         this.stayService = stayService;
         this.marketService = marketService;
@@ -83,6 +86,7 @@ public class GameplayLoopService {
         this.plotUpgradeService = plotUpgradeService;
         this.ratingService = ratingService;
         this.eventService = eventService;
+        this.solvencyService = solvencyService;
         this.random = random;
 
         // Nœud dédié attaché à la racine : regroupe la logique de la boucle et
@@ -155,6 +159,9 @@ public class GameplayLoopService {
         double salaries = staffService.paySalaries(campsite);
         staffService.runAutomation(campsite);
 
+        // Solde négatif : intérêts de dette, érosion de réputation, faillite au-delà du seuil.
+        boolean bankrupted = solvencyService.settle(campsite);
+
         // Note en étoiles : un nouveau palier atteint verse une prime (inclus dans le bénéfice).
         int stars = ratingService.stars(campsite);
         boolean milestone = stars > bestStars.getOrDefault(campsite.getUniqueID(), 0);
@@ -181,7 +188,7 @@ public class GameplayLoopService {
         return new DaySummary(dayNumber, seasonService.seasonOf(dayNumber).displayName(),
                 seasonService.isSpecialEvent(dayNumber), departing.size(), abandoned,
                 salaries, net, campsite.getMoney(), campsite.getReputation(), campers, queue,
-                stars, milestone, event);
+                stars, milestone, event, bankrupted);
     }
 
     /** Affiche le bilan du matin aux joueurs de l'instance du camping. */
@@ -210,6 +217,13 @@ public class GameplayLoopService {
         instance.sendMessage(line("Solde", Math.round(s.money()) + " $", NamedTextColor.GREEN));
         instance.sendMessage(line("Réputation", Math.round(s.reputation()) + " / 100", NamedTextColor.LIGHT_PURPLE));
         instance.sendMessage(line("Note", RatingService.render(s.stars()), NamedTextColor.GOLD));
+        if (s.bankrupted()) {
+            instance.sendMessage(Component.text("⚠ Faillite ! Renflouement d'urgence : solde remis à zéro, réputation lourdement touchée.",
+                    NamedTextColor.RED, TextDecoration.BOLD));
+        } else if (s.money() < 0) {
+            instance.sendMessage(Component.text("⚠ Solde négatif : intérêts de dette et réputation en baisse. Redressez la barre !",
+                    NamedTextColor.RED));
+        }
         if (s.starMilestone()) {
             instance.sendMessage(Component.text("★ Nouveau palier ! Prime de "
                     + Math.round(STAR_MILESTONE_REWARD_PER_STAR * s.stars()) + " $ versée.",

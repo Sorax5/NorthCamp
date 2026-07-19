@@ -21,6 +21,7 @@ public record DaySummary(
         long queue,
         int stars,
         boolean starMilestone,
-        CampEvent event
+        CampEvent event,
+        boolean bankrupted
 ) {
 }
