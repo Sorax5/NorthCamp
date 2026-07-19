@@ -10,6 +10,7 @@ import net.minestom.server.entity.EntityType;
 import net.minestom.server.entity.PlayerSkin;
 import net.minestom.server.entity.attribute.Attribute;
 import net.minestom.server.entity.metadata.avatar.MannequinMeta;
+import net.minestom.server.coordinate.Pos;
 import net.minestom.server.network.player.ResolvableProfile;
 import org.joml.Vector3d;
 
@@ -27,6 +28,10 @@ public class StaffEntity extends EntityCreature {
     private static final double ARRIVAL_DISTANCE = 2.0;
     private static final Duration MAX_WORK_COOLDOWN = Duration.ofSeconds(4);
     private static final Duration MIN_WORK_COOLDOWN = Duration.ofMillis(800);
+    /** En dessous de ce déplacement entre deux pas, l'employé est considéré immobile. */
+    private static final double STUCK_EPSILON = 0.05;
+    /** Pas consécutifs sans progrès (≈ secondes) avant déblocage automatique. */
+    private static final int STUCK_LIMIT = 5;
 
     private final Staff staff;
     private final Campsite campsite;
@@ -36,6 +41,8 @@ public class StaffEntity extends EntityCreature {
 
     private long tickCounter;
     private Instant lastWork = Instant.EPOCH;
+    private Pos lastPosition;
+    private int stuckSteps;
 
     public java.util.UUID staffId() {
         return staff.getUniqueId();
@@ -88,17 +95,44 @@ public class StaffEntity extends EntityCreature {
         var target = PositionMapper.toMinestomPos(targetVec);
 
         if (getPosition().distance(target) > ARRIVAL_DISTANCE) {
+            // Détection d'un employé coincé (pathfinding bloqué) : aucun progrès
+            // pendant plusieurs pas → déblocage automatique par téléportation.
+            if (lastPosition != null && getPosition().distance(lastPosition) < STUCK_EPSILON) {
+                if (++stuckSteps >= STUCK_LIMIT) {
+                    unstick();
+                    return;
+                }
+            } else {
+                stuckSteps = 0;
+            }
+            lastPosition = getPosition();
+
             updateName("va travailler");
             getNavigator().setPathTo(target);
             return;
         }
 
+        stuckSteps = 0;
         // Sur place : accomplir une tâche si la cadence le permet.
         if (Duration.between(lastWork, Instant.now()).compareTo(workCooldown) >= 0) {
             boolean did = brain.work(staff, campsite);
             lastWork = Instant.now();
             updateName(did ? "au travail" : "en attente");
         }
+    }
+
+    /**
+     * Débloque l'employé : le ramène à l'accueil, purge son chemin coincé et
+     * réarme son travail. Appelé automatiquement (immobilité) ou manuellement
+     * ({@code /staff wake}).
+     */
+    public void unstick() {
+        stuckSteps = 0;
+        lastPosition = null;
+        lastWork = Instant.EPOCH;
+        getNavigator().setPathTo(null);
+        teleport(PositionMapper.toMinestomPos(reception));
+        updateName("débloqué");
     }
 
     private void updateName(String status) {

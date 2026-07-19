@@ -7,6 +7,7 @@ import fr.phylisiumstudio.app.menu.NpcLocator;
 import fr.phylisiumstudio.logic.Campsite;
 import fr.phylisiumstudio.logic.service.CampsiteService;
 import fr.phylisiumstudio.logic.staff.Staff;
+import fr.phylisiumstudio.logic.staff.StaffEntity;
 import fr.phylisiumstudio.logic.staff.StaffMarket;
 import fr.phylisiumstudio.logic.staff.StaffRole;
 import fr.phylisiumstudio.logic.staff.StaffService;
@@ -66,6 +67,23 @@ public class StaffCommand extends Command {
                 ArgumentType.Literal("tp"), idArg);
         addSyntax((sender, ctx) -> locate(sender, UUID.fromString(ctx.get(idArg)), false),
                 ArgumentType.Literal("locate"), idArg);
+
+        addSyntax((sender, ctx) -> wake(sender), ArgumentType.Literal("wake"));
+    }
+
+    /** Débloque tous les employés coincés de l'instance (téléportation à l'accueil). */
+    private void wake(CommandSender sender) {
+        if (!(sender instanceof Player player) || player.getInstance() == null) {
+            return;
+        }
+        int count = 0;
+        for (var entity : player.getInstance().getEntities()) {
+            if (entity instanceof StaffEntity) {
+                entity.getAcquirable().sync(e -> ((StaffEntity) e).unstick());
+                count++;
+            }
+        }
+        player.sendMessage(Component.text(count + " employé(s) débloqué(s).", NamedTextColor.GREEN));
     }
 
     /** Téléporte le joueur vers l'employé, ou le met en surbrillance. */
@@ -122,6 +140,7 @@ public class StaffCommand extends Command {
         menu.footer();
         menu.line(ChatMenu.row(
                 ChatMenu.button("Rafraîchir", NamedTextColor.AQUA, "/staff refresh", "Nouveaux candidats"),
+                ChatMenu.button("Débloquer", NamedTextColor.GOLD, "/staff wake", "Débloquer les employés coincés"),
                 ChatMenu.button("Retour", NamedTextColor.GRAY, "/camp", "Menu principal")));
         menu.send(sender);
     }
