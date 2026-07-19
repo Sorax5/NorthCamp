@@ -49,19 +49,32 @@ public class InteractionService {
             return;
         }
         var id = target.getTag(InteractionTags.ID);
+        // Entité taguée KIND sans ID : cible incohérente, on ignore le clic.
+        if (id == null) {
+            return;
+        }
 
         dispatch(player, campsite, kind, id);
     }
 
     private void dispatch(Player player, Campsite campsite, String kind, String id) {
         switch (kind) {
-            case InteractionTags.PLOT -> menus.openPlot(player, campsite, UUID.fromString(id));
-            case InteractionTags.ACTIVITY -> menus.openActivity(player, campsite, UUID.fromString(id));
-            case InteractionTags.STAFF -> menus.openStaff(player, campsite, UUID.fromString(id));
-            case InteractionTags.CLIENT -> menus.openClient(player, campsite, UUID.fromString(id));
+            case InteractionTags.PLOT -> withUuid(id, u -> menus.openPlot(player, campsite, u));
+            case InteractionTags.ACTIVITY -> withUuid(id, u -> menus.openActivity(player, campsite, u));
+            case InteractionTags.STAFF -> withUuid(id, u -> menus.openStaff(player, campsite, u));
+            case InteractionTags.CLIENT -> withUuid(id, u -> menus.openClient(player, campsite, u));
             case InteractionTags.SLOT_PLOT -> menus.openSlot(player, campsite, true, id);
             case InteractionTags.SLOT_ACTIVITY -> menus.openSlot(player, campsite, false, id);
             default -> { /* type inconnu : rien */ }
+        }
+    }
+
+    /** Parse l'UUID sans jamais laisser une saisie corrompue casser le listener. */
+    private void withUuid(String id, java.util.function.Consumer<UUID> action) {
+        try {
+            action.accept(UUID.fromString(id));
+        } catch (IllegalArgumentException ignored) {
+            // Tag ID malformé : cible invalide, rien à ouvrir.
         }
     }
 }

@@ -96,8 +96,10 @@ public class CampsiteView {
             player.setGameMode(GameMode.ADVENTURE);
             player.setAllowFlying(true);
 
+            // PlayerSpawnEvent peut se répéter (respawn, changement d'instance) :
+            // ne créer la sidebar qu'une fois pour éviter d'orpheliner sa tâche.
             campsiteService.getCampsiteByOwner(player.getUuid()).ifPresent(campsite ->
-                    sidebars.put(player.getUuid(), new SidebarView(player, campsite)));
+                    sidebars.computeIfAbsent(player.getUuid(), uuid -> new SidebarView(player, campsite)));
         });
         MinecraftServer.getGlobalEventHandler().addChild(node);
     }
