@@ -26,6 +26,12 @@ public class StaffEntity extends EntityCreature {
 
     private static final int RETARGET_INTERVAL = 20; // ~1 s
     private static final double ARRIVAL_DISTANCE = 2.0;
+    /**
+     * Portée à laquelle l'employé peut accomplir sa tâche même sans l'atteindre
+     * pile : la tâche est logique, la position n'est que cosmétique. Évite qu'un
+     * NPC coincé à quelques blocs (cible dans un mur) ne travaille jamais.
+     */
+    private static final double WORK_RANGE = 6.0;
     private static final Duration MAX_WORK_COOLDOWN = Duration.ofSeconds(4);
     private static final Duration MIN_WORK_COOLDOWN = Duration.ofMillis(800);
     /** En dessous de ce déplacement entre deux pas, l'employé est considéré immobile. */
@@ -93,27 +99,40 @@ public class StaffEntity extends EntityCreature {
     private void step() {
         var targetVec = brain.target(staff, campsite, reception);
         var target = PositionMapper.toMinestomPos(targetVec);
+        double dist = getPosition().distance(target);
 
-        if (getPosition().distance(target) > ARRIVAL_DISTANCE) {
-            // Détection d'un employé coincé (pathfinding bloqué) : aucun progrès
-            // pendant plusieurs pas → déblocage automatique par téléportation.
-            if (lastPosition != null && getPosition().distance(lastPosition) < STUCK_EPSILON) {
-                if (++stuckSteps >= STUCK_LIMIT) {
-                    unstick();
-                    return;
-                }
-            } else {
-                stuckSteps = 0;
-            }
-            lastPosition = getPosition();
-
-            updateName("va travailler");
-            getNavigator().setPathTo(target);
+        if (dist <= ARRIVAL_DISTANCE) {
+            stuckSteps = 0;
+            doWork();
             return;
         }
 
-        stuckSteps = 0;
-        // Sur place : accomplir une tâche si la cadence le permet.
+        // Pas encore arrivé : avancer, et détecter un blocage (aucun progrès).
+        boolean noProgress = lastPosition != null && getPosition().distance(lastPosition) < STUCK_EPSILON;
+        lastPosition = getPosition();
+
+        if (noProgress && ++stuckSteps >= STUCK_LIMIT) {
+            stuckSteps = 0;
+            if (dist <= WORK_RANGE) {
+                // Coincé mais assez proche : la tâche est logique, on l'accomplit sur place
+                // (plutôt que de téléporter en boucle sur une cible inatteignable).
+                doWork();
+            } else {
+                // Vraiment perdu : retour à l'accueil en dernier recours.
+                unstick();
+            }
+            return;
+        }
+        if (!noProgress) {
+            stuckSteps = 0;
+        }
+
+        updateName("va travailler");
+        getNavigator().setPathTo(target);
+    }
+
+    /** Accomplit une tâche sur place si la cadence le permet. */
+    private void doWork() {
         if (Duration.between(lastWork, Instant.now()).compareTo(workCooldown) >= 0) {
             boolean did = brain.work(staff, campsite);
             lastWork = Instant.now();
@@ -123,8 +142,8 @@ public class StaffEntity extends EntityCreature {
 
     /**
      * Débloque l'employé : le ramène à l'accueil, purge son chemin coincé et
-     * réarme son travail. Appelé automatiquement (immobilité) ou manuellement
-     * ({@code /staff wake}).
+     * réarme son travail. Appelé manuellement ({@code /staff wake}) ou en dernier
+     * recours quand la cible est hors de portée.
      */
     public void unstick() {
         stuckSteps = 0;
