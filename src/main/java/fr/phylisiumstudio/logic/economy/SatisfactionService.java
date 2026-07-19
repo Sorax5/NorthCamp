@@ -2,6 +2,7 @@ package fr.phylisiumstudio.logic.economy;
 
 import com.google.inject.Singleton;
 import fr.phylisiumstudio.logic.Campsite;
+import fr.phylisiumstudio.logic.activity.ActivityType;
 import fr.phylisiumstudio.logic.client.Client;
 
 /**
@@ -22,6 +23,8 @@ public class SatisfactionService {
     private static final double DIRTY_PLOT_PENALTY = 15.0;
     private static final double ACTIVITY_UNAVAILABLE_PENALTY = 12.0;
     private static final double ACTIVITY_ENJOYED_BONUS = 8.0;
+    /** Bonus supplémentaire quand l'activité correspond à l'archétype du client. */
+    private static final double PREFERRED_ACTIVITY_BONUS = 6.0;
 
     /** En dessous de ce seuil, un client en attente abandonne la file. */
     public static final double ABANDON_THRESHOLD = 30.0;
@@ -49,9 +52,16 @@ public class SatisfactionService {
         client.setSatisfaction(clamp(client.getSatisfaction() + delta));
     }
 
-    /** Récompense de satisfaction pour un client qui profite d'une activité. */
-    public static void applyActivityEnjoyed(Client client) {
-        apply(client, ACTIVITY_ENJOYED_BONUS);
+    /**
+     * Récompense de satisfaction pour un client qui profite d'une activité, avec
+     * un bonus si l'activité correspond à son archétype.
+     */
+    public static void applyActivityEnjoyed(Client client, ActivityType type) {
+        double bonus = ACTIVITY_ENJOYED_BONUS;
+        if (client.getArchetype() != null && client.getArchetype().preferredActivity() == type) {
+            bonus += PREFERRED_ACTIVITY_BONUS;
+        }
+        apply(client, bonus);
     }
 
     /** Pénalité quand le client trouve l'activité indisponible ou pleine. */
@@ -68,7 +78,9 @@ public class SatisfactionService {
         if (priceRatio <= 1.0) {
             adjust(client, GOOD_DEAL_BONUS * (1.0 - priceRatio));
         } else if (priceRatio > PRICE_TOLERANCE) {
-            adjust(client, -OVERPRICE_PENALTY * (priceRatio - PRICE_TOLERANCE));
+            // La pénalité dépend de la sensibilité au prix de l'archétype du client.
+            double sensitivity = client.getArchetype() != null ? client.getArchetype().priceSensitivity() : 1.0;
+            adjust(client, -OVERPRICE_PENALTY * (priceRatio - PRICE_TOLERANCE) * sensitivity);
         }
     }
 

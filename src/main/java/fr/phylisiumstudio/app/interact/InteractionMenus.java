@@ -133,7 +133,12 @@ public class InteractionMenus {
                 .findFirst().orElse(null);
         if (client == null) return;
 
+        var archetype = client.getArchetype();
+        var prefText = archetype != null && archetype.preferredActivity() != null
+                ? " — aime " + archetype.preferredActivity().name()
+                : "";
         var menu = ChatMenu.titled(client.isFamily() ? "Famille ×" + client.getGroupSize() : "Client")
+                .text("Profil : " + (archetype != null ? archetype.displayName() : "?") + prefText, NamedTextColor.GOLD)
                 .text("État : " + client.getLifecycle(), NamedTextColor.AQUA)
                 .text("Séjour : " + client.getRemainingDays() + "/" + client.getTotalStayDays() + " j", NamedTextColor.WHITE)
                 .text("Budget : " + Math.round(client.getBudget()) + " $", NamedTextColor.GREEN)

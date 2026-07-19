@@ -38,6 +38,12 @@ public class Client {
     /** Jauge de satisfaction 0–100 ; influence la fidélité et la réputation. */
     private double satisfaction;
 
+    /**
+     * Profil du client (attentes d'activité et sensibilité au prix). Sérialisé via
+     * setter ; les anciennes sauvegardes sans ce champ retombent sur {@link ClientArchetype#TOURIST}.
+     */
+    private ClientArchetype archetype = ClientArchetype.TOURIST;
+
     /** Client seul, sans séjour planifié — utilisé par les tests et l'ancien flux. */
     public Client(Plot plot) {
         this(UUID.randomUUID(), ClientState.SLEEPY, ClientLifecycle.WAITING, plot, 1, 1, 0.0);

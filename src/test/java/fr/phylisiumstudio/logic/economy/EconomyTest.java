@@ -1,7 +1,9 @@
 package fr.phylisiumstudio.logic.economy;
 
 import fr.phylisiumstudio.logic.Campsite;
+import fr.phylisiumstudio.logic.activity.ActivityType;
 import fr.phylisiumstudio.logic.client.Client;
+import fr.phylisiumstudio.logic.client.ClientArchetype;
 import fr.phylisiumstudio.logic.gameplay.AssignmentOutcome;
 import fr.phylisiumstudio.logic.gameplay.PlotAssignmentService;
 import fr.phylisiumstudio.logic.plot.Plot;
@@ -73,7 +75,7 @@ class EconomyTest {
         var client = new Client(1, 1, 100);
         double base = client.getSatisfaction();
 
-        SatisfactionService.applyActivityEnjoyed(client);
+        SatisfactionService.applyActivityEnjoyed(client, ActivityType.SWIM);
         assertTrue(client.getSatisfaction() > base);
 
         double high = client.getSatisfaction();
@@ -89,6 +91,35 @@ class EconomyTest {
 
         sat.evaluatePricing(client, 2.0); // deux fois le prix juste
         assertTrue(client.getSatisfaction() < before);
+    }
+
+    @Test
+    void priceSensitivityDependsOnArchetype() {
+        var sat = new SatisfactionService();
+
+        var picky = new Client(1, 1, 100);
+        picky.setArchetype(ClientArchetype.TOURIST); // sensibilité 1.2
+        sat.evaluatePricing(picky, 2.0);
+
+        var relaxed = new Client(1, 1, 100);
+        relaxed.setArchetype(ClientArchetype.GRILLER); // sensibilité 0.7
+        sat.evaluatePricing(relaxed, 2.0);
+
+        // Même dépassement de prix : le fêtard s'en formalise moins que le touriste.
+        assertTrue(relaxed.getSatisfaction() > picky.getSatisfaction());
+    }
+
+    @Test
+    void preferredActivityGivesExtraSatisfaction() {
+        var angler = new Client(1, 1, 100);
+        angler.setArchetype(ClientArchetype.ANGLER); // préfère FISHING
+        var other = new Client(1, 1, 100);
+        other.setArchetype(ClientArchetype.ANGLER);
+
+        SatisfactionService.applyActivityEnjoyed(angler, ActivityType.FISHING); // préférée
+        SatisfactionService.applyActivityEnjoyed(other, ActivityType.SWIM);     // quelconque
+
+        assertTrue(angler.getSatisfaction() > other.getSatisfaction());
     }
 
     @Test

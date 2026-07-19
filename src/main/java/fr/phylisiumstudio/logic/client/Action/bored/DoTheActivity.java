@@ -45,7 +45,7 @@ public class DoTheActivity extends TimedLeafTask {
         // Revenu plafonné au budget du client (plus de dépense infinie), et
         // profiter d'une activité remonte sa satisfaction.
         double earned = EconomyService.collectActivityIncome(campsite, client, activity.getPrice());
-        SatisfactionService.applyActivityEnjoyed(client);
+        SatisfactionService.applyActivityEnjoyed(client, activity.getType());
         Effects.moneyPopup(entity.getInstance(), entity.getPosition(), earned);
         return true;
     }

@@ -3,6 +3,7 @@ package fr.phylisiumstudio.logic.gameplay;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import fr.phylisiumstudio.logic.client.Client;
+import fr.phylisiumstudio.logic.client.ClientArchetype;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -41,7 +42,10 @@ public class ArrivalGenerator {
         double factor = 1.0 + (random.nextDouble() * 2.0 - 1.0) * BUDGET_VARIANCE;
         double budget = Math.round(base * factor);
 
-        return new Client(groupSize, stayDays, budget);
+        var client = new Client(groupSize, stayDays, budget);
+        var archetypes = ClientArchetype.values();
+        client.setArchetype(archetypes[random.nextInt(archetypes.length)]);
+        return client;
     }
 
     /** Génère un lot d'arrivées. */
