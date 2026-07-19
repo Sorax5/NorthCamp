@@ -3,12 +3,16 @@ package fr.phylisiumstudio.logic;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import fr.phylisiumstudio.logic.activity.Activity;
+import fr.phylisiumstudio.logic.amenity.Amenity;
 import fr.phylisiumstudio.logic.client.Client;
 import fr.phylisiumstudio.logic.plot.Plot;
 import fr.phylisiumstudio.logic.staff.Staff;
 import lombok.Getter;
 
+import java.util.Collection;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -25,6 +29,9 @@ public class Campsite {
     private final List<Client> clients;
     private final List<Staff> staff;
 
+    /** Aménagements construits (sanitaires, épicerie…), au bénéfice de tout le camping. */
+    private final Set<Amenity> amenities;
+
     private double money = 0;
 
     /** Réputation du camping (0–100) ; attire plus ou moins de clients. */
@@ -37,6 +44,7 @@ public class Campsite {
         this.plots = new CopyOnWriteArrayList<>();
         this.clients = new CopyOnWriteArrayList<>();
         this.staff = new CopyOnWriteArrayList<>();
+        this.amenities = EnumSet.noneOf(Amenity.class);
     }
 
     @JsonCreator
@@ -48,7 +56,8 @@ public class Campsite {
             @JsonProperty("clients") List<Client> clients,
             @JsonProperty("staff") List<Staff> staff,
             @JsonProperty("money") double money,
-            @JsonProperty("reputation") double reputation
+            @JsonProperty("reputation") double reputation,
+            @JsonProperty("amenities") Collection<Amenity> amenities
     ) {
         this.uniqueID = uniqueID;
         this.ownerID = ownerID;
@@ -58,6 +67,10 @@ public class Campsite {
         this.staff = new CopyOnWriteArrayList<>(staff != null ? staff : List.of());
         this.money = money;
         this.reputation = reputation;
+        // Ancienne sauvegarde sans aménagements : ensemble vide par défaut.
+        this.amenities = (amenities == null || amenities.isEmpty())
+                ? EnumSet.noneOf(Amenity.class)
+                : EnumSet.copyOf(amenities);
     }
 
     public void addActivity(Activity activity) {
@@ -74,6 +87,14 @@ public class Campsite {
 
     public void addStaff(Staff staff) {
         this.staff.add(staff);
+    }
+
+    public boolean hasAmenity(Amenity amenity) {
+        return this.amenities.contains(amenity);
+    }
+
+    public void addAmenity(Amenity amenity) {
+        this.amenities.add(amenity);
     }
 
     public void addMoney(double amount) {

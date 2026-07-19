@@ -8,6 +8,7 @@ import fr.phylisiumstudio.logic.client.ClientLifecycle;
 import fr.phylisiumstudio.logic.clock.GamePhase;
 import fr.phylisiumstudio.logic.clock.event.PhaseChangeEvent;
 import fr.phylisiumstudio.logic.economy.MarketService;
+import fr.phylisiumstudio.logic.amenity.AmenityService;
 import fr.phylisiumstudio.logic.economy.SatisfactionService;
 import fr.phylisiumstudio.logic.economy.SolvencyService;
 import fr.phylisiumstudio.logic.plot.PlotUpgradeService;
@@ -58,6 +59,7 @@ public class GameplayLoopService {
     private final RatingService ratingService;
     private final EventService eventService;
     private final SolvencyService solvencyService;
+    private final AmenityService amenityService;
     private final Random random;
 
     /** Solde de chaque camping au matin précédent, pour calculer le bénéfice du jour. */
@@ -76,6 +78,7 @@ public class GameplayLoopService {
                                RatingService ratingService,
                                EventService eventService,
                                SolvencyService solvencyService,
+                               AmenityService amenityService,
                                Random random) {
         this.stayService = stayService;
         this.marketService = marketService;
@@ -87,6 +90,7 @@ public class GameplayLoopService {
         this.ratingService = ratingService;
         this.eventService = eventService;
         this.solvencyService = solvencyService;
+        this.amenityService = amenityService;
         this.random = random;
 
         // Nœud dédié attaché à la racine : regroupe la logique de la boucle et
@@ -147,6 +151,10 @@ public class GameplayLoopService {
 
         // Revenu passif nocturne des emplacements occupés (croît avec leur niveau).
         collectPlotIncome(campsite);
+
+        // Confort des aménagements : chaque service construit remonte un peu la
+        // satisfaction des campeurs en séjour.
+        applyAmenityComfort(campsite);
 
         // Les séjours avancent ; ceux qui se terminent passent en LEAVING et leur
         // satisfaction finale est reportée maintenant sur la réputation.
@@ -251,6 +259,19 @@ public class GameplayLoopService {
         }
         if (income > 0) {
             campsite.addMoney(income);
+        }
+    }
+
+    /** Applique le bonus de confort des aménagements à chaque client en séjour. */
+    private void applyAmenityComfort(Campsite campsite) {
+        double bonus = amenityService.dailyComfortBonus(campsite);
+        if (bonus <= 0) {
+            return;
+        }
+        for (var client : campsite.getClients()) {
+            if (client.getLifecycle() == ClientLifecycle.STAYING) {
+                SatisfactionService.applyComfort(client, bonus);
+            }
         }
     }
 

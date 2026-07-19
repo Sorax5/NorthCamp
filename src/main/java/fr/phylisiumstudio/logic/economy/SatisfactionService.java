@@ -76,6 +76,13 @@ public class SatisfactionService {
         apply(client, -SCARE_PENALTY);
     }
 
+    /** Confort apporté par les aménagements du camping (bonus quotidien). */
+    public static void applyComfort(Client client, double amount) {
+        if (amount > 0) {
+            apply(client, amount);
+        }
+    }
+
     /**
      * Applique l'effet du prix demandé (via le ratio marché) sur la satisfaction.
      *

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import fr.phylisiumstudio.app.commands.ActivitiesCommand;
+import fr.phylisiumstudio.app.commands.AmenitiesCommand;
 import fr.phylisiumstudio.app.commands.CampCommand;
 import fr.phylisiumstudio.app.commands.ClientsCommand;
 import fr.phylisiumstudio.app.commands.LeaderboardCommand;
@@ -101,6 +102,8 @@ public class App implements IApplication {
     private ActivitiesCommand activitiesCommand;
     @Inject
     private SlotsCommand slotsCommand;
+    @Inject
+    private AmenitiesCommand amenitiesCommand;
     @Inject
     private ShutdownCommand shutdownCommand;
 
@@ -280,6 +283,7 @@ public class App implements IApplication {
             commandManager.register(clientsCommand);
             commandManager.register(activitiesCommand);
             commandManager.register(slotsCommand);
+            commandManager.register(amenitiesCommand);
 
             registerMotd();
 
