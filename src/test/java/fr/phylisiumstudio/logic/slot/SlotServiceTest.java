@@ -2,11 +2,13 @@ package fr.phylisiumstudio.logic.slot;
 
 import fr.phylisiumstudio.logic.Campsite;
 import fr.phylisiumstudio.logic.economy.EconomyService;
+import fr.phylisiumstudio.logic.economy.MarketService;
 import fr.phylisiumstudio.logic.plot.PlotType;
 import fr.phylisiumstudio.logic.schematic.SchematicFactory;
 import org.joml.Vector3d;
 import org.junit.jupiter.api.Test;
 
+import java.util.Random;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -17,7 +19,7 @@ class SlotServiceTest {
         // Aucun layout schématic enregistré -> LayoutService génère la grille par défaut.
         var layout = new LayoutService(new SchematicFactory());
         layout.load();
-        return new SlotService(layout, new EconomyService());
+        return new SlotService(layout, new EconomyService(), new MarketService(new Random(1)));
     }
 
     @Test
@@ -38,7 +40,10 @@ class SlotServiceTest {
         int before = slots.size();
         var target = slots.get(0).position();
 
-        assertNotNull(service.buyPlot(campsite, target, PlotType.CAMPSITE));
+        var bought = service.buyPlot(campsite, target, PlotType.CAMPSITE);
+        assertNotNull(bought);
+        // Tarif initial aligné sur le marché : encaisse dès la 1re nuit.
+        assertTrue(bought.getPrice() > 0);
         assertEquals(5_000 - SlotService.PLOT_SLOT_PRICE, campsite.getMoney());
         assertEquals(1, campsite.getPlots().size());
         // Le slot acheté n'est plus proposé.

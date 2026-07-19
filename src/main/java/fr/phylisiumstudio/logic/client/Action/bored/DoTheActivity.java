@@ -3,6 +3,8 @@ package fr.phylisiumstudio.logic.client.Action.bored;
 import com.badlogic.gdx.ai.btree.Task;
 import fr.phylisiumstudio.logic.client.Action.TimedLeafTask;
 import fr.phylisiumstudio.logic.client.ClientEntity;
+import fr.phylisiumstudio.logic.economy.EconomyService;
+import fr.phylisiumstudio.logic.economy.SatisfactionService;
 import fr.phylisiumstudio.logic.effect.Effects;
 
 import java.time.Duration;
@@ -26,8 +28,12 @@ public class DoTheActivity extends TimedLeafTask {
             return false;
         }
 
-        if (!activity.addClient(memory.getClient())) {
+        var client = memory.getClient();
+
+        if (!activity.addClient(client)) {
             entity.setCurrentAction("Oh, c'est plein !");
+            // Activité pleine : petite déception.
+            SatisfactionService.applyActivityUnavailable(client);
             memory.setChoosenActivity(null);
             return false;
         }
@@ -36,7 +42,10 @@ public class DoTheActivity extends TimedLeafTask {
         memory.setChoosenActivity(null);
         activityDuration = Duration.ofSeconds(activity.getDuration());
 
-        campsite.addMoney(activity.getPrice());
+        // Revenu plafonné au budget du client (plus de dépense infinie), et
+        // profiter d'une activité remonte sa satisfaction.
+        EconomyService.collectActivityIncome(campsite, client, activity.getPrice());
+        SatisfactionService.applyActivityEnjoyed(client);
         return true;
     }
 

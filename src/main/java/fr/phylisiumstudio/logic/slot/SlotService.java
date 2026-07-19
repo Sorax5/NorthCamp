@@ -6,6 +6,7 @@ import fr.phylisiumstudio.logic.Campsite;
 import fr.phylisiumstudio.logic.activity.Activity;
 import fr.phylisiumstudio.logic.activity.ActivityType;
 import fr.phylisiumstudio.logic.economy.EconomyService;
+import fr.phylisiumstudio.logic.economy.MarketService;
 import fr.phylisiumstudio.logic.plot.Plot;
 import fr.phylisiumstudio.logic.plot.PlotType;
 import org.joml.Vector3d;
@@ -32,11 +33,13 @@ public class SlotService {
 
     private final LayoutService layoutService;
     private final EconomyService economyService;
+    private final MarketService marketService;
 
     @Inject
-    public SlotService(LayoutService layoutService, EconomyService economyService) {
+    public SlotService(LayoutService layoutService, EconomyService economyService, MarketService marketService) {
         this.layoutService = layoutService;
         this.economyService = economyService;
+        this.marketService = marketService;
     }
 
     /** Emplacements de camping encore libres (non déjà occupés par un plot défini). */
@@ -63,6 +66,9 @@ public class SlotService {
         }
         economyService.charge(campsite, PLOT_SLOT_PRICE);
         var plot = new Plot(new Vector3d(position), type);
+        // Tarif initial aligné sur le marché : le joueur encaisse dès la 1re nuit
+        // (satisfaction neutre) et ajuste ensuite à la hausse ou à la baisse.
+        plot.setPrice(marketService.fairPrice(type));
         campsite.addPlot(plot);
         return plot;
     }

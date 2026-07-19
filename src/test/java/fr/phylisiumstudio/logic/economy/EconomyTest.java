@@ -55,6 +55,33 @@ class EconomyTest {
     }
 
     @Test
+    void activityIncomeIsCappedByClientBudget() {
+        var campsite = new Campsite(UUID.randomUUID());
+        var client = new Client(1, 1, 10); // budget 10
+
+        double earned = EconomyService.collectActivityIncome(campsite, client, 25);
+
+        assertEquals(10.0, earned);
+        assertEquals(0.0, client.getBudget());
+        assertEquals(10.0, campsite.getMoney());
+        // Budget épuisé : plus rien encaissé la fois suivante.
+        assertEquals(0.0, EconomyService.collectActivityIncome(campsite, client, 25));
+    }
+
+    @Test
+    void enjoyingActivityRaisesSatisfactionAndFullOneLowersIt() {
+        var client = new Client(1, 1, 100);
+        double base = client.getSatisfaction();
+
+        SatisfactionService.applyActivityEnjoyed(client);
+        assertTrue(client.getSatisfaction() > base);
+
+        double high = client.getSatisfaction();
+        SatisfactionService.applyActivityUnavailable(client);
+        assertTrue(client.getSatisfaction() < high);
+    }
+
+    @Test
     void overpricingLowersSatisfaction() {
         var sat = new SatisfactionService();
         var client = new Client(1, 1, 100);

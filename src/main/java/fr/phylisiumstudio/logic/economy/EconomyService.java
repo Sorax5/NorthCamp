@@ -28,8 +28,23 @@ public class EconomyService {
      * @return le montant réellement encaissé.
      */
     public double earnActivityIncome(Campsite campsite, Client client, double income) {
+        return collectActivityIncome(campsite, client, income);
+    }
+
+    /**
+     * Encaisse le revenu d'une activité, plafonné au budget restant du client.
+     * Statique pour être appelable depuis l'arbre de comportement (hors DI).
+     *
+     * @return le montant réellement encaissé.
+     */
+    public static double collectActivityIncome(Campsite campsite, Client client, double income) {
         double amount = Math.min(income, client.getBudget());
-        return transfer(campsite, client, amount);
+        if (amount <= 0) {
+            return 0.0;
+        }
+        client.setBudget(client.getBudget() - amount);
+        campsite.addMoney(amount);
+        return amount;
     }
 
     private double transfer(Campsite campsite, Client client, double amount) {

@@ -26,6 +26,12 @@ public class StaffService {
     private static final int MAX_EXTRA_CAPACITY = 4;
     /** Rendement financier quotidien maximal (à compétence 1) d'un employé finance. */
     private static final double FINANCE_MAX_YIELD = 0.02;
+    /**
+     * Plafond absolu du rendement finance par employé et par jour. Coupe l'effet
+     * boule de neige des intérêts composés (sinon : plus on est riche, plus on
+     * gagne passivement — stratégie dégénérée).
+     */
+    private static final double FINANCE_DAILY_CAP = 500.0;
 
     private final PlotAssignmentService assignmentService;
     private final ClientStayService stayService;
@@ -121,6 +127,7 @@ public class StaffService {
     /** Rendement financier : une bonne gestion génère un revenu proportionnel au solde. */
     private void applyFinanceYield(Campsite campsite, double skill) {
         double yield = campsite.getMoney() * FINANCE_MAX_YIELD * Math.max(0.0, Math.min(1.0, skill));
+        yield = Math.min(yield, FINANCE_DAILY_CAP);
         if (yield > 0) {
             campsite.addMoney(yield);
         }

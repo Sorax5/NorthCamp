@@ -41,7 +41,22 @@ public class SatisfactionService {
     }
 
     private void adjust(Client client, double delta) {
+        apply(client, delta);
+    }
+
+    /** Opération pure partagée (utilisable sans DI, ex. depuis l'arbre de comportement). */
+    private static void apply(Client client, double delta) {
         client.setSatisfaction(clamp(client.getSatisfaction() + delta));
+    }
+
+    /** Récompense de satisfaction pour un client qui profite d'une activité. */
+    public static void applyActivityEnjoyed(Client client) {
+        apply(client, ACTIVITY_ENJOYED_BONUS);
+    }
+
+    /** Pénalité quand le client trouve l'activité indisponible ou pleine. */
+    public static void applyActivityUnavailable(Client client) {
+        apply(client, -ACTIVITY_UNAVAILABLE_PENALTY);
     }
 
     /**
