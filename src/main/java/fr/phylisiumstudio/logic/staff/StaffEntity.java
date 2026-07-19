@@ -37,6 +37,10 @@ public class StaffEntity extends EntityCreature {
     private long tickCounter;
     private Instant lastWork = Instant.EPOCH;
 
+    public java.util.UUID staffId() {
+        return staff.getUniqueId();
+    }
+
     public StaffEntity(Staff staff, PlayerSkin skin, Campsite campsite, StaffBrain brain, Vector3d reception) {
         super(EntityType.MANNEQUIN);
         this.staff = staff;
