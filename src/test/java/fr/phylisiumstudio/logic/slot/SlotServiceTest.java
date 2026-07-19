@@ -38,7 +38,7 @@ class SlotServiceTest {
         int before = slots.size();
         var target = slots.get(0).position();
 
-        assertTrue(service.buyPlot(campsite, target, PlotType.CAMPSITE));
+        assertNotNull(service.buyPlot(campsite, target, PlotType.CAMPSITE));
         assertEquals(5_000 - SlotService.PLOT_SLOT_PRICE, campsite.getMoney());
         assertEquals(1, campsite.getPlots().size());
         // Le slot acheté n'est plus proposé.
@@ -52,7 +52,7 @@ class SlotServiceTest {
         campsite.addMoney(10); // insuffisant
 
         var target = service.availablePlotSlots(campsite).get(0).position();
-        assertFalse(service.buyPlot(campsite, target, PlotType.CAMPSITE));
+        assertNull(service.buyPlot(campsite, target, PlotType.CAMPSITE));
         assertTrue(campsite.getPlots().isEmpty());
     }
 
@@ -61,6 +61,6 @@ class SlotServiceTest {
         var service = service();
         var campsite = new Campsite(UUID.randomUUID());
         campsite.addMoney(5_000);
-        assertFalse(service.buyPlot(campsite, new Vector3d(9_999, 9_999, 9_999), PlotType.CAMPSITE));
+        assertNull(service.buyPlot(campsite, new Vector3d(9_999, 9_999, 9_999), PlotType.CAMPSITE));
     }
 }

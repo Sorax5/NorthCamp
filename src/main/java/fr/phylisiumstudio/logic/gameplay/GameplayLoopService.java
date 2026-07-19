@@ -78,11 +78,15 @@ public class GameplayLoopService {
         marketService.fluctuate();
         degradeActivities(campsite);
 
-        // Les clients en attente trop insatisfaits abandonnent la file (perte + réputation).
+        // Les clients en attente perdent patience jour après jour ; trop insatisfaits,
+        // ils abandonnent la file (perte + réputation).
         int abandoned = 0;
         for (var client : campsite.getClients()) {
-            if (client.getLifecycle() == ClientLifecycle.WAITING
-                    && satisfactionService.shouldAbandonQueue(client)) {
+            if (client.getLifecycle() != ClientLifecycle.WAITING) {
+                continue;
+            }
+            satisfactionService.applyWaitingImpatience(client);
+            if (satisfactionService.shouldAbandonQueue(client)) {
                 satisfactionService.applyQueueAbandonment(campsite);
                 client.setLifecycle(ClientLifecycle.GONE);
                 abandoned++;

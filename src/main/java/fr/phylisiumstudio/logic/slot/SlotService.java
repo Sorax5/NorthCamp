@@ -54,29 +54,32 @@ public class SlotService {
     /**
      * Achète et définit un emplacement de camping du type choisi.
      *
-     * @return {@code true} si l'achat a réussi (solde suffisant et slot libre).
+     * @return le {@link Plot} créé, ou {@code null} si l'achat a échoué
+     *         (solde insuffisant ou slot déjà pris).
      */
-    public boolean buyPlot(Campsite campsite, Vector3d position, PlotType type) {
+    public Plot buyPlot(Campsite campsite, Vector3d position, PlotType type) {
         if (campsite.getMoney() < PLOT_SLOT_PRICE || !isAvailable(availablePlotSlots(campsite), position)) {
-            return false;
+            return null;
         }
         economyService.charge(campsite, PLOT_SLOT_PRICE);
-        campsite.addPlot(new Plot(new Vector3d(position), type));
-        return true;
+        var plot = new Plot(new Vector3d(position), type);
+        campsite.addPlot(plot);
+        return plot;
     }
 
     /**
      * Achète et définit un emplacement d'activité du type choisi.
      *
-     * @return {@code true} si l'achat a réussi.
+     * @return l'{@link Activity} créée, ou {@code null} si l'achat a échoué.
      */
-    public boolean buyActivity(Campsite campsite, Vector3d position, ActivityType type) {
+    public Activity buyActivity(Campsite campsite, Vector3d position, ActivityType type) {
         if (campsite.getMoney() < ACTIVITY_SLOT_PRICE || !isAvailable(availableActivitySlots(campsite), position)) {
-            return false;
+            return null;
         }
         economyService.charge(campsite, ACTIVITY_SLOT_PRICE);
-        campsite.addActivity(new Activity(new Vector3d(position), 15, 5, 4, type));
-        return true;
+        var activity = new Activity(new Vector3d(position), 15, 5, 4, type);
+        campsite.addActivity(activity);
+        return activity;
     }
 
     private List<Slot> filterAvailable(List<Vector3d> positions, Set<Vector3d> occupied, SlotKind kind) {

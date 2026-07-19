@@ -25,6 +25,11 @@ public class SatisfactionService {
 
     /** En dessous de ce seuil, un client en attente abandonne la file. */
     public static final double ABANDON_THRESHOLD = 30.0;
+    /**
+     * Satisfaction perdue par un client à chaque jour passé à attendre une place.
+     * Depuis 70 (départ) vers 30 (seuil), l'abandon survient après ~4 jours d'attente.
+     */
+    public static final double WAITING_IMPATIENCE_DECAY = 12.0;
 
     /** Facteur de report de la satisfaction finale d'un client sur la réputation. */
     private static final double REPUTATION_DEPARTURE_FACTOR = 0.05;
@@ -62,6 +67,11 @@ public class SatisfactionService {
 
     public void rewardActivityEnjoyed(Client client) {
         adjust(client, ACTIVITY_ENJOYED_BONUS);
+    }
+
+    /** Fait perdre patience à un client encore en attente d'un emplacement. */
+    public void applyWaitingImpatience(Client client) {
+        adjust(client, -WAITING_IMPATIENCE_DECAY);
     }
 
     /** Un client en attente abandonne-t-il faute de satisfaction suffisante ? */

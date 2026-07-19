@@ -4,9 +4,13 @@ import com.google.inject.Inject;
 import fr.phylisiumstudio.app.menu.CampsiteResolver;
 import fr.phylisiumstudio.app.menu.ChatMenu;
 import fr.phylisiumstudio.logic.Campsite;
+import fr.phylisiumstudio.logic.activity.Activity;
 import fr.phylisiumstudio.logic.activity.ActivityType;
+import fr.phylisiumstudio.logic.plot.Plot;
 import fr.phylisiumstudio.logic.plot.PlotType;
+import fr.phylisiumstudio.logic.service.CampsiteBuilderService;
 import fr.phylisiumstudio.logic.service.CampsiteService;
+import fr.phylisiumstudio.logic.service.InstanceService;
 import fr.phylisiumstudio.logic.slot.Slot;
 import fr.phylisiumstudio.logic.slot.SlotService;
 import net.kyori.adventure.text.Component;
@@ -25,12 +29,17 @@ public class SlotsCommand extends Command {
 
     private final CampsiteService campsiteService;
     private final SlotService slotService;
+    private final InstanceService instanceService;
+    private final CampsiteBuilderService builderService;
 
     @Inject
-    public SlotsCommand(CampsiteService campsiteService, SlotService slotService) {
+    public SlotsCommand(CampsiteService campsiteService, SlotService slotService,
+                        InstanceService instanceService, CampsiteBuilderService builderService) {
         super("slots");
         this.campsiteService = campsiteService;
         this.slotService = slotService;
+        this.instanceService = instanceService;
+        this.builderService = builderService;
 
         setDefaultExecutor((sender, ctx) -> showMenu(sender));
 
@@ -109,8 +118,11 @@ public class SlotsCommand extends Command {
             sender.sendMessage(Component.text("Emplacement introuvable.", NamedTextColor.RED));
             return;
         }
-        boolean ok = slotService.buyPlot(campsite, slots.get(index).position(), type);
-        feedback(sender, ok, "Camping " + type.name() + " acquis.");
+        Plot plot = slotService.buyPlot(campsite, slots.get(index).position(), type);
+        if (plot != null) {
+            builderService.buildPlotAsync(plot, instanceService.getInstance(campsite));
+        }
+        feedback(sender, plot != null, "Camping " + type.name() + " acquis.");
     }
 
     private void buyActivity(CommandSender sender, Campsite campsite, int index, ActivityType type) {
@@ -119,13 +131,16 @@ public class SlotsCommand extends Command {
             sender.sendMessage(Component.text("Emplacement introuvable.", NamedTextColor.RED));
             return;
         }
-        boolean ok = slotService.buyActivity(campsite, slots.get(index).position(), type);
-        feedback(sender, ok, "Activité " + type.name() + " acquise.");
+        Activity activity = slotService.buyActivity(campsite, slots.get(index).position(), type);
+        if (activity != null) {
+            builderService.buildActivityAsync(activity, instanceService.getInstance(campsite));
+        }
+        feedback(sender, activity != null, "Activité " + type.name() + " acquise.");
     }
 
     private void feedback(CommandSender sender, boolean ok, String success) {
         if (ok) {
-            sender.sendMessage(Component.text(success + " (visible à la prochaine ouverture de l'instance)", NamedTextColor.GREEN));
+            sender.sendMessage(Component.text(success, NamedTextColor.GREEN));
         } else {
             sender.sendMessage(Component.text("Achat impossible (solde insuffisant ou emplacement pris).", NamedTextColor.RED));
         }

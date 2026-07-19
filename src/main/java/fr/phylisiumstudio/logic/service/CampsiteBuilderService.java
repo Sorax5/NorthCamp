@@ -3,8 +3,10 @@ package fr.phylisiumstudio.logic.service;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import fr.phylisiumstudio.logic.Campsite;
+import fr.phylisiumstudio.logic.activity.Activity;
 import fr.phylisiumstudio.logic.builder.ActivityBuilder;
 import fr.phylisiumstudio.logic.builder.PlotBuilder;
+import fr.phylisiumstudio.logic.plot.Plot;
 import net.minestom.server.instance.InstanceContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,19 +34,29 @@ public class CampsiteBuilderService {
         var futures = new ArrayList<CompletableFuture<Void>>();
 
         for (var activity : campsite.getActivities()) {
-            var activityData = activityDataService.getActivityData(activity.getType());
-            if (activityBuilder != null) {
-                futures.add(activityBuilder.BuildAsync(activityData, activity, instanceContainer));
-            }
+            futures.add(buildActivityAsync(activity, instanceContainer));
         }
 
         for (var plot : campsite.getPlots()) {
-            var plotData = plotDataService.getPlotData(plot.getPlotType());
-            if (plotBuilder != null) {
-                futures.add(plotBuilder.BuildAsync(plotData, plot, instanceContainer));
-            }
+            futures.add(buildPlotAsync(plot, instanceContainer));
         }
 
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+    }
+
+    /** Construit un seul emplacement de camping dans l'instance (achat à chaud). */
+    public CompletableFuture<Void> buildPlotAsync(Plot plot, InstanceContainer instanceContainer) {
+        if (plotBuilder == null) {
+            return CompletableFuture.completedFuture(null);
+        }
+        return plotBuilder.BuildAsync(plotDataService.getPlotData(plot.getPlotType()), plot, instanceContainer);
+    }
+
+    /** Construit une seule activité dans l'instance (achat à chaud). */
+    public CompletableFuture<Void> buildActivityAsync(Activity activity, InstanceContainer instanceContainer) {
+        if (activityBuilder == null) {
+            return CompletableFuture.completedFuture(null);
+        }
+        return activityBuilder.BuildAsync(activityDataService.getActivityData(activity.getType()), activity, instanceContainer);
     }
 }
