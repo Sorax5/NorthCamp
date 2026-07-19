@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Gère une {@link GameClock} par camping et pilote son cycle jour/nuit.
@@ -33,9 +34,12 @@ public class GameClockService {
     private final int dayDurationSeconds;
     private final int nightDurationSeconds;
 
+    /** Ticks de jeu par seconde réelle (cadence Minestom). */
+    private static final int TICKS_PER_SECOND = 20;
+
     private final ConcurrentHashMap<UUID, Handle> handles = new ConcurrentHashMap<>();
 
-    private record Handle(GameClock clock, Task task) {}
+    private record Handle(GameClock clock, Task task, AtomicInteger subTick) {}
 
     @Inject
     public GameClockService(App app) {
@@ -60,13 +64,14 @@ public class GameClockService {
             // Planifié sur l'ordonnanceur de l'instance : le tick d'horloge s'exécute
             // sur le thread de tick de l'instance, donc l'accès au temps de l'instance
             // et la diffusion de l'événement sont thread-safe par construction.
+            // Cadence au tick (et non à la seconde) pour un ciel fluide sans à-coups.
             var task = instance.scheduler().submitTask(() -> {
                 tick(campsite, instance);
-                return TaskSchedule.seconds(1);
+                return TaskSchedule.tick(1);
             });
 
             logger.info("Game clock started for campsite {}", campsite.getUniqueID());
-            return new Handle(clock, task);
+            return new Handle(clock, task, new AtomicInteger(0));
         });
     }
 
@@ -89,14 +94,21 @@ public class GameClockService {
             return;
         }
         var clock = handle.clock();
-        boolean transitioned = clock.tick();
+        int sub = handle.subTick().incrementAndGet();
 
-        // Chaque seconde : le ciel Minecraft suit la progression de l'horloge.
-        instance.setTime(clock.minecraftTime());
-
-        if (transitioned) {
-            announce(instance, clock);
-            EventDispatcher.call(new PhaseChangeEvent(campsite, instance, clock.getPhase(), clock.getDayNumber()));
+        if (sub >= TICKS_PER_SECOND) {
+            // Une seconde de jeu écoulée : l'horloge avance (phases, numéro de jour).
+            handle.subTick().set(0);
+            boolean transitioned = clock.tick();
+            instance.setTime(clock.minecraftTime());
+            if (transitioned) {
+                announce(instance, clock);
+                EventDispatcher.call(new PhaseChangeEvent(campsite, instance, clock.getPhase(), clock.getDayNumber()));
+            }
+        } else {
+            // Entre deux secondes : ciel interpolé pour un défilement fluide.
+            // ponytail: 20 maj/s par instance ; throttler à 1 tick sur 2 si le réseau serre.
+            instance.setTime(clock.minecraftTime(sub / (double) TICKS_PER_SECOND));
         }
     }
 
