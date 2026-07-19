@@ -66,7 +66,7 @@ public class PricingCommand extends Command {
                     ? Component.text(" (trop cher !)", NamedTextColor.RED)
                     : Component.text(" (compétitif)", NamedTextColor.GREEN);
 
-            menu.line(Component.text(type.name() + " ×" + plots.size(), NamedTextColor.AQUA)
+            menu.line(Component.text(type.displayName() + " ×" + plots.size(), NamedTextColor.AQUA)
                     .append(Component.text("  vous: " + Math.round(current) + " $ | marché: "
                             + Math.round(fair) + " $", NamedTextColor.GRAY))
                     .append(verdict));

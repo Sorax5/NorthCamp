@@ -150,7 +150,7 @@ public class PlaceInfoView {
                 : Component.text("Libre", NamedTextColor.GRAY);
 
         return lines(
-                Component.text(plot.getPlotType().name() + " niv." + plot.getLevel(), NamedTextColor.AQUA),
+                Component.text(plot.getPlotType().displayName() + " niv." + plot.getLevel(), NamedTextColor.AQUA),
                 Component.text("Prix : " + Math.round(plot.getPrice()) + " $", NamedTextColor.WHITE),
                 state,
                 occupancy,
@@ -163,7 +163,7 @@ public class PlaceInfoView {
                 : Component.text("En panne", NamedTextColor.RED);
 
         return lines(
-                Component.text(activity.getType().name() + " niv." + activity.getCurrentLevel(), NamedTextColor.AQUA),
+                Component.text(activity.getType().displayName() + " niv." + activity.getCurrentLevel(), NamedTextColor.AQUA),
                 Component.text("Prix : " + Math.round(activity.getPrice()) + " $", NamedTextColor.WHITE),
                 state,
                 Component.text("Clients : " + activity.getCurrentClients().size() + "/" + activity.getMaxClients(),

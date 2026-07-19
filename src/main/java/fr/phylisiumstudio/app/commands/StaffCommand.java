@@ -148,7 +148,7 @@ public class StaffCommand extends Command {
     private Component describe(Staff staff, boolean showRole) {
         var role = staff.getAssignedRole();
         var roleText = showRole
-                ? " [" + (role != null ? role.name() + " " + pct(staff.skill(role)) : "inactif") + "]"
+                ? " [" + (role != null ? role.displayName() + " " + pct(staff.skill(role)) : "inactif") + "]"
                 : " (spéc. " + topRole(staff) + ")";
         return Component.text(staff.getName(), NamedTextColor.AQUA)
                 .append(Component.text(roleText, NamedTextColor.GRAY))
@@ -193,7 +193,7 @@ public class StaffCommand extends Command {
                 best = role;
             }
         }
-        return best.name() + " " + pct(staff.skill(best));
+        return best.displayName() + " " + pct(staff.skill(best));
     }
 
     private static String pct(double skill) {

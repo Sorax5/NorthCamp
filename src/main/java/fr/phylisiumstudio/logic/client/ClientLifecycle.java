@@ -7,11 +7,21 @@ package fr.phylisiumstudio.logic.client;
  */
 public enum ClientLifecycle {
     /** Arrivé, patiente à l'accueil en attente d'affectation. */
-    WAITING,
+    WAITING("En attente"),
     /** Installé sur un emplacement, vit ses vacances. */
-    STAYING,
+    STAYING("En séjour"),
     /** Séjour terminé, quitte le camping. */
-    LEAVING,
+    LEAVING("En départ"),
     /** A quitté le camping (sans avoir été servi, ou fin de séjour). */
-    GONE
+    GONE("Parti");
+
+    private final String displayName;
+
+    ClientLifecycle(String displayName) {
+        this.displayName = displayName;
+    }
+
+    public String displayName() {
+        return displayName;
+    }
 }

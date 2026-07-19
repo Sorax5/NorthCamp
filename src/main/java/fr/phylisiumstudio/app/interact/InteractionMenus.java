@@ -147,7 +147,7 @@ public class InteractionMenus {
 
         var role = staff.getAssignedRole();
         ChatMenu.titled("Employé " + staff.getName())
-                .text("Rôle : " + (role != null ? role.name() : "inactif"), NamedTextColor.AQUA)
+                .text("Rôle : " + (role != null ? role.displayName() : "inactif"), NamedTextColor.AQUA)
                 .text("Salaire : " + Math.round(staff.getDailySalary()) + " $/j", NamedTextColor.YELLOW)
                 .blank()
                 .line(ChatMenu.row(
@@ -164,11 +164,11 @@ public class InteractionMenus {
 
         var archetype = client.getArchetype();
         var prefText = archetype != null && archetype.preferredActivity() != null
-                ? " — aime " + archetype.preferredActivity().name()
+                ? " — aime " + archetype.preferredActivity().displayName()
                 : "";
         var menu = ChatMenu.titled(client.isFamily() ? "Famille ×" + client.getGroupSize() : "Client")
                 .text("Profil : " + (archetype != null ? archetype.displayName() : "?") + prefText, NamedTextColor.GOLD)
-                .text("État : " + client.getLifecycle(), NamedTextColor.AQUA)
+                .text("État : " + client.getLifecycle().displayName(), NamedTextColor.AQUA)
                 .text("Séjour : " + client.getRemainingDays() + "/" + client.getTotalStayDays() + " j", NamedTextColor.WHITE)
                 .text("Budget : " + Math.round(client.getBudget()) + " $", NamedTextColor.GREEN)
                 .text("Satisfaction : " + Math.round(client.getSatisfaction()) + "%", NamedTextColor.LIGHT_PURPLE)
