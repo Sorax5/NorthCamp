@@ -31,6 +31,17 @@ class RatingServiceTest {
     }
 
     @Test
+    void priceMultiplierGrowsWithStars() {
+        var campsite = new Campsite(UUID.randomUUID());
+        // Réputation par défaut 50 -> 2 étoiles -> 1 + 2*0.08 = 1.16.
+        assertEquals(1.0 + 2 * RatingService.STAR_PRICE_BONUS, RatingService.priceMultiplier(campsite), 1e-9);
+
+        // Réputation au plafond -> 5 étoiles -> 1.40.
+        campsite.adjustReputation(100);
+        assertEquals(1.0 + 5 * RatingService.STAR_PRICE_BONUS, RatingService.priceMultiplier(campsite), 1e-9);
+    }
+
+    @Test
     void ratingBlendsReputationAndSatisfactionWithClients() {
         var campsite = new Campsite(UUID.randomUUID());
         // Sans client : basé sur la réputation seule (défaut 50 -> 2 étoiles).

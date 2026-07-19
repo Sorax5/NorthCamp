@@ -14,6 +14,7 @@ import fr.phylisiumstudio.logic.economy.MarketService;
 import fr.phylisiumstudio.logic.plot.Plot;
 import fr.phylisiumstudio.logic.plot.PlotType;
 import fr.phylisiumstudio.logic.plot.PlotUpgradeService;
+import fr.phylisiumstudio.logic.rating.RatingService;
 import fr.phylisiumstudio.logic.service.PlotDataService;
 import fr.phylisiumstudio.logic.slot.Slot;
 import fr.phylisiumstudio.logic.slot.SlotService;
@@ -78,6 +79,9 @@ public class InteractionMenus {
                         NamedTextColor.WHITE)
                 .text("Prix : " + Math.round(plot.getPrice()) + " $  (marché "
                         + Math.round(marketService.fairPrice(plot.getPlotType())) + " $)", NamedTextColor.GRAY)
+                .text("Loyer perçu : " + Math.round(plot.getPrice() * RatingService.priceMultiplier(campsite))
+                        + " $  (premium ★ ×" + String.format("%.2f", RatingService.priceMultiplier(campsite)) + ")",
+                        NamedTextColor.GREEN)
                 .text("État : " + (plot.isDirty() ? "Sale" : "Propre"),
                         plot.isDirty() ? NamedTextColor.RED : NamedTextColor.GREEN);
         if (occupant != null) {

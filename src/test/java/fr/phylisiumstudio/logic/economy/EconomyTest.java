@@ -8,6 +8,7 @@ import fr.phylisiumstudio.logic.gameplay.AssignmentOutcome;
 import fr.phylisiumstudio.logic.gameplay.PlotAssignmentService;
 import fr.phylisiumstudio.logic.plot.Plot;
 import fr.phylisiumstudio.logic.plot.PlotType;
+import fr.phylisiumstudio.logic.rating.RatingService;
 import org.joml.Vector3d;
 import org.junit.jupiter.api.Test;
 
@@ -39,8 +40,10 @@ class EconomyTest {
         var outcome = checkIn.checkIn(campsite, client, p);
 
         assertEquals(AssignmentOutcome.SUCCESS, outcome);
-        assertEquals(50.0, campsite.getMoney());
-        assertEquals(150.0, client.getBudget());
+        // Loyer de base 50 majoré du premium étoiles du camping.
+        double rent = 50.0 * RatingService.priceMultiplier(campsite);
+        assertEquals(rent, campsite.getMoney(), 1e-9);
+        assertEquals(200.0 - rent, client.getBudget(), 1e-9);
     }
 
     @Test

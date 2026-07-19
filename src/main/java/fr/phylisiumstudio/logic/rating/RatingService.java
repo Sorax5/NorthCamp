@@ -13,6 +13,8 @@ import fr.phylisiumstudio.logic.client.Client;
 public class RatingService {
 
     public static final int MAX_STARS = 5;
+    /** Majoration de prix par étoile : un camping mieux noté peut facturer plus cher. */
+    public static final double STAR_PRICE_BONUS = 0.08;
 
     /** Note en étoiles du camping (0–5). Sans client, se fonde sur la seule réputation. */
     public int stars(Campsite campsite) {
@@ -42,6 +44,14 @@ public class RatingService {
                 .mapToDouble(Client::getSatisfaction)
                 .average()
                 .orElse(0.0);
+    }
+
+    /**
+     * Multiplicateur de prix lié à la note : les loyers et revenus d'activité
+     * grimpent avec l'étoile courante ({@code 1.0} à 0★, jusqu'à {@code 1.40} à 5★).
+     */
+    public static double priceMultiplier(Campsite campsite) {
+        return 1.0 + ratingOf(campsite) * STAR_PRICE_BONUS;
     }
 
     /** Rendu texte « ★★★☆☆ » pour un nombre d'étoiles donné. */
