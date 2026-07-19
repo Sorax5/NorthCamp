@@ -4,6 +4,7 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import fr.phylisiumstudio.logic.Campsite;
 import fr.phylisiumstudio.logic.activity.Activity;
+import fr.phylisiumstudio.logic.activity.ActivitySupplyService;
 import fr.phylisiumstudio.logic.activity.ActivityType;
 import fr.phylisiumstudio.logic.economy.EconomyService;
 import fr.phylisiumstudio.logic.economy.MarketService;
@@ -83,7 +84,13 @@ public class SlotService {
             return null;
         }
         economyService.charge(campsite, ACTIVITY_SLOT_PRICE);
-        var activity = new Activity(new Vector3d(position), 15, 5, 4, type);
+        // Prix de base majoré du coût de fourniture : les activités à consommable
+        // se facturent plus cher. Stock de départ offert pour les mêmes.
+        double price = 5 + type.supplyCost();
+        var activity = new Activity(new Vector3d(position), 15, price, 4, type);
+        if (type.consumesSupplies()) {
+            activity.setSupplies(ActivitySupplyService.STARTING_SUPPLIES);
+        }
         campsite.addActivity(activity);
         return activity;
     }

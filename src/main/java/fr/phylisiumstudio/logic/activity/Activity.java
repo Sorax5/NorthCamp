@@ -30,6 +30,9 @@ public class Activity {
     private ActivityType type;
     private int currentLevel = 0;
 
+    /** Fournitures en stock (appât, charbon…), consommées à chaque passage si le type l'exige. */
+    private int supplies = 0;
+
     /** Activité opérationnelle : indisponible tant qu'un employé ne l'a pas entretenue. */
     private boolean operational = true;
 
@@ -67,4 +70,26 @@ public class Activity {
     public void removeClient(Client client) {
         currentClients.remove(client);
     }
+
+    /** L'activité a-t-elle de quoi fonctionner (stock suffisant, ou type sans consommable) ? */
+    public boolean hasSupplies() {
+        return !type.consumesSupplies() || supplies > 0;
+    }
+
+    /**
+     * Consomme une fourniture pour un passage. Sans effet si le type ne consomme rien.
+     *
+     * @return {@code true} si le passage peut avoir lieu (stock disponible ou non requis).
+     */
+    public boolean consumeSupply() {
+        if (!type.consumesSupplies()) {
+            return true;
+        }
+        if (supplies <= 0) {
+            return false;
+        }
+        supplies--;
+        return true;
+    }
 }
+

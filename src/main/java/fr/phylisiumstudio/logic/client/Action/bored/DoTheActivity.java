@@ -38,6 +38,15 @@ public class DoTheActivity extends TimedLeafTask {
             return false;
         }
 
+        if (!activity.consumeSupply()) {
+            // Rupture de stock : l'activité ne peut pas servir ce client.
+            entity.setCurrentAction("En rupture de stock");
+            activity.removeClient(client);
+            SatisfactionService.applyActivityUnavailable(client);
+            memory.setChoosenActivity(null);
+            return false;
+        }
+
         memory.setCurrentActivity(activity);
         memory.setChoosenActivity(null);
         activityDuration = Duration.ofSeconds(activity.getDuration());

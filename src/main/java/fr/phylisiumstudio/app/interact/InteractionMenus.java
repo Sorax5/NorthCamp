@@ -109,8 +109,13 @@ public class InteractionMenus {
                 .text("État : " + (activity.isOperational() ? "Disponible" : "En panne"),
                         activity.isOperational() ? NamedTextColor.GREEN : NamedTextColor.RED)
                 .text("Clients : " + activity.getCurrentClients().size() + "/" + activity.getMaxClients(),
-                        NamedTextColor.GRAY)
-                .blank()
+                        NamedTextColor.GRAY);
+        if (activity.getType().consumesSupplies()) {
+            menu.text("Fournitures : " + activity.getSupplies()
+                    + (activity.hasSupplies() ? "" : " — RUPTURE"),
+                    activity.hasSupplies() ? NamedTextColor.GRAY : NamedTextColor.RED);
+        }
+        menu.blank()
                 .line(ChatMenu.row(
                         ChatMenu.button("-1", NamedTextColor.RED, "/activities price " + activityId + " -1", "Baisser le prix"),
                         ChatMenu.button("+1", NamedTextColor.GREEN, "/activities price " + activityId + " 1", "Augmenter le prix"),
@@ -122,6 +127,10 @@ public class InteractionMenus {
         if (activityUpgradeService.canUpgrade(activityData, activity)) {
             menu.line(ChatMenu.button("Améliorer (" + activityUpgradeService.nextCost(activityData, activity) + " $)",
                     NamedTextColor.GOLD, "/activities upgrade " + activityId, "Monter d'un niveau : +capacité, +revenu"));
+        }
+        if (activity.getType().consumesSupplies()) {
+            menu.line(ChatMenu.button("Ravitailler +10 (" + (activity.getType().supplyCost() * 10) + " $)",
+                    NamedTextColor.YELLOW, "/activities restock " + activityId + " 10", "Acheter 10 fournitures"));
         }
         menu.footer();
         menu.send(player);
