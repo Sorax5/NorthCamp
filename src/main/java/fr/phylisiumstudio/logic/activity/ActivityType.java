@@ -7,16 +7,22 @@ package fr.phylisiumstudio.logic.activity;
  * baignade, elle, ne consomme rien.
  */
 public enum ActivityType {
-    FISHING(TimeAffinity.DAY, 4),
-    SWIM(TimeAffinity.DAY, 0),
-    BARBECUE(TimeAffinity.NIGHT, 8);
+    FISHING("Pêche", TimeAffinity.DAY, 4),
+    SWIM("Baignade", TimeAffinity.DAY, 0),
+    BARBECUE("Barbecue", TimeAffinity.NIGHT, 8);
 
+    private final String displayName;
     private final TimeAffinity affinity;
     private final int supplyCost;
 
-    ActivityType(TimeAffinity affinity, int supplyCost) {
+    ActivityType(String displayName, TimeAffinity affinity, int supplyCost) {
+        this.displayName = displayName;
         this.affinity = affinity;
         this.supplyCost = supplyCost;
+    }
+
+    public String displayName() {
+        return displayName;
     }
 
     public TimeAffinity affinity() {

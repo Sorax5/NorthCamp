@@ -65,7 +65,7 @@ public class DoTheActivity extends TimedLeafTask {
         var entity = memory.getPlayerEntity();
         var activity = memory.getCurrentActivity();
 
-        entity.setCurrentAction("Doing " + activity.getType() + " (" + getTimeLeft().toSeconds() + "s left)");
+        entity.setCurrentAction(activity.getType().displayName() + " (" + getTimeLeft().toSeconds() + "s)");
     }
 
     @Override

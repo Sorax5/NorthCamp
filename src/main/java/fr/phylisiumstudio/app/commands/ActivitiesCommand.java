@@ -133,7 +133,7 @@ public class ActivitiesCommand extends Command {
             var stockText = activity.getType().consumesSupplies()
                     ? " — stock " + activity.getSupplies()
                     : "";
-            menu.line(Component.text(activity.getType().name(), NamedTextColor.AQUA)
+            menu.line(Component.text(activity.getType().displayName(), NamedTextColor.AQUA)
                     .append(Component.text(" niv." + activity.getCurrentLevel()
                             + " — " + Math.round(activity.getPrice()) + " $ — cap." + activity.getMaxClients()
                             + stockText, NamedTextColor.GRAY))

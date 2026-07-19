@@ -107,7 +107,7 @@ public class InteractionMenus {
                 .findFirst().orElse(null);
         if (activity == null) return;
 
-        var menu = ChatMenu.titled("Activité " + activity.getType().name())
+        var menu = ChatMenu.titled("Activité " + activity.getType().displayName())
                 .text("Niveau : " + activity.getCurrentLevel(), NamedTextColor.WHITE)
                 .text("Prix : " + Math.round(activity.getPrice()) + " $", NamedTextColor.GRAY)
                 .text("État : " + (activity.isOperational() ? "Disponible" : "En panne"),
@@ -217,9 +217,10 @@ public class InteractionMenus {
             menu.text("Coût : " + Math.round(SlotService.ACTIVITY_SLOT_PRICE) + " $", NamedTextColor.GOLD).blank();
             var parts = new Component[ActivityType.values().length];
             for (int i = 0; i < ActivityType.values().length; i++) {
-                var name = ActivityType.values()[i].name();
-                parts[i] = ChatMenu.button(name, NamedTextColor.YELLOW,
-                        "/slots buyactivity " + index + " " + name, "Définir en " + name);
+                var at = ActivityType.values()[i];
+                parts[i] = ChatMenu.button(at.displayName(), NamedTextColor.YELLOW,
+                        "/slots buyactivity " + index + " " + at.name(),
+                        at.consumesSupplies() ? "Consomme des fournitures, tarif plus élevé" : "Sans fourniture");
             }
             menu.line(ChatMenu.row(parts));
         }
