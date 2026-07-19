@@ -3,6 +3,7 @@ package fr.phylisiumstudio.app.commands;
 import com.google.inject.Inject;
 import fr.phylisiumstudio.app.menu.CampsiteResolver;
 import fr.phylisiumstudio.app.menu.ChatMenu;
+import fr.phylisiumstudio.app.menu.NpcLocator;
 import fr.phylisiumstudio.logic.Campsite;
 import fr.phylisiumstudio.logic.service.CampsiteService;
 import fr.phylisiumstudio.logic.staff.Staff;
@@ -13,6 +14,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.minestom.server.command.CommandSender;
 import net.minestom.server.command.builder.Command;
+import net.minestom.server.entity.Player;
 import net.minestom.server.command.builder.arguments.ArgumentType;
 
 import java.util.UUID;
@@ -59,6 +61,28 @@ public class StaffCommand extends Command {
             staffMarket.refresh(campsite.getUniqueID());
             showMenu(sender);
         }), ArgumentType.Literal("refresh"));
+
+        addSyntax((sender, ctx) -> locate(sender, UUID.fromString(ctx.get(idArg)), true),
+                ArgumentType.Literal("tp"), idArg);
+        addSyntax((sender, ctx) -> locate(sender, UUID.fromString(ctx.get(idArg)), false),
+                ArgumentType.Literal("locate"), idArg);
+    }
+
+    /** Téléporte le joueur vers l'employé, ou le met en surbrillance. */
+    private void locate(CommandSender sender, UUID staffId, boolean teleport) {
+        if (!(sender instanceof Player player)) {
+            return;
+        }
+        NpcLocator.findStaff(player, staffId).ifPresentOrElse(
+                npc -> {
+                    if (teleport) {
+                        NpcLocator.teleportTo(player, npc);
+                    } else {
+                        NpcLocator.highlight(player, npc);
+                    }
+                },
+                () -> player.sendMessage(Component.text(
+                        "Employé introuvable dans le monde.", NamedTextColor.RED)));
     }
 
     private void withCampsite(CommandSender sender, Consumer<Campsite> action) {
@@ -120,7 +144,10 @@ public class StaffCommand extends Command {
                 ChatMenu.button("Maintenance", NamedTextColor.WHITE, "/staff assign " + staff.getUniqueId() + " MAINTENANCE", "Compétence " + pct(staff.skill(StaffRole.MAINTENANCE))),
                 ChatMenu.button("Finance", NamedTextColor.WHITE, "/staff assign " + staff.getUniqueId() + " FINANCE", "Compétence " + pct(staff.skill(StaffRole.FINANCE))),
                 ChatMenu.button("Renvoyer", NamedTextColor.RED, "/staff fire " + staff.getUniqueId(), "Licencier " + staff.getName()));
-        return builder.append(row);
+        var locate = ChatMenu.row(
+                ChatMenu.button("TP", NamedTextColor.GREEN, "/staff tp " + staff.getUniqueId(), "Se téléporter sur l'employé"),
+                ChatMenu.button("Localiser", NamedTextColor.AQUA, "/staff locate " + staff.getUniqueId(), "Le faire briller 5s"));
+        return builder.append(row).append(Component.text("  ")).append(locate);
     }
 
     private void recruit(Campsite campsite, UUID candidateId) {

@@ -3,6 +3,8 @@ package fr.phylisiumstudio.app.commands;
 import com.google.inject.Inject;
 import fr.phylisiumstudio.app.menu.CampsiteResolver;
 import fr.phylisiumstudio.app.menu.ChatMenu;
+import fr.phylisiumstudio.app.menu.NpcLocator;
+import net.minestom.server.entity.Player;
 import fr.phylisiumstudio.logic.Campsite;
 import fr.phylisiumstudio.logic.client.Client;
 import fr.phylisiumstudio.logic.client.ClientLifecycle;
@@ -44,6 +46,13 @@ public class ClientsCommand extends Command {
             assignClient(sender, campsite, UUID.fromString(ctx.get(idArg)));
             showMenu(sender);
         }, ArgumentType.Literal("assign"), idArg);
+
+        addSyntax((sender, ctx) -> {
+            if (sender instanceof Player player) {
+                NpcLocator.findClient(player, UUID.fromString(ctx.get(idArg)))
+                        .ifPresent(npc -> NpcLocator.highlight(player, npc));
+            }
+        }, ArgumentType.Literal("locate"), idArg);
     }
 
     private void showMenu(CommandSender sender) {
@@ -66,7 +75,9 @@ public class ClientsCommand extends Command {
         } else {
             menu.text("Emplacements libres : " + available, NamedTextColor.GRAY);
             for (var client : waiting) {
-                menu.line(ChatMenu.row(describe(client), assignButton(campsite, client)));
+                var locate = ChatMenu.button("Localiser", NamedTextColor.AQUA,
+                        "/clients locate " + client.getUniqueID(), "Le faire briller 5s");
+                menu.line(ChatMenu.row(describe(client), assignButton(campsite, client), locate));
             }
         }
 
