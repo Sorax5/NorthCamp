@@ -51,6 +51,7 @@ import java.io.File;
 import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Singleton
 @Getter
@@ -100,6 +101,8 @@ public class App implements IApplication {
     private ActivitiesCommand activitiesCommand;
     @Inject
     private SlotsCommand slotsCommand;
+    @Inject
+    private ShutdownCommand shutdownCommand;
 
     @Inject
     private CampsiteView campsiteView;
@@ -133,8 +136,14 @@ public class App implements IApplication {
         StartServer();
     }
 
+    /** Garde-fou : le teardown ne doit s'exécuter qu'une fois (appel explicite + hook JVM). */
+    private final AtomicBoolean disabled = new AtomicBoolean(false);
+
     @Override
     public void OnDisable() {
+        if (!disabled.compareAndSet(false, true)) {
+            return;
+        }
         try {
             logger.info("Saving data...");
 
@@ -262,7 +271,7 @@ public class App implements IApplication {
             var address = new InetSocketAddress(mainConfig.Host, mainConfig.Port);
 
             var commandManager = MinecraftServer.getCommandManager();
-            commandManager.register(new ShutdownCommand());
+            commandManager.register(shutdownCommand);
             commandManager.register(moneyCommand);
             commandManager.register(leaderboardCommand);
             commandManager.register(campCommand);
