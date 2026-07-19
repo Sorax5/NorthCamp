@@ -39,6 +39,7 @@ public class CampsiteView {
     private final List<ClientView> clientsStateViews;
     private final List<StaffView> staffViews;
     private final List<PlaceInfoView> placeInfoViews;
+    private final java.util.Map<java.util.UUID, SidebarView> sidebars = new java.util.concurrent.ConcurrentHashMap<>();
     private final CampsiteService campsiteService;
     private final InstanceService instanceService;
     private final GameClockService gameClockService;
@@ -88,6 +89,9 @@ public class CampsiteView {
             // Mode aventure : le joueur observe et gère, il ne casse ni ne pose de bloc.
             player.setGameMode(GameMode.ADVENTURE);
             player.setAllowFlying(true);
+
+            campsiteService.getCampsiteByOwner(player.getUuid()).ifPresent(campsite ->
+                    sidebars.put(player.getUuid(), new SidebarView(player, campsite)));
         });
         MinecraftServer.getGlobalEventHandler().addChild(node);
     }
@@ -123,6 +127,13 @@ public class CampsiteView {
 
     private void onPlayerDisconnect(PlayerDisconnectEvent event) {
         var player = event.getPlayer();
+
+        // Sidebar propre à ce joueur : toujours retirée à sa déconnexion.
+        var sidebar = sidebars.remove(player.getUuid());
+        if (sidebar != null) {
+            sidebar.dispose();
+        }
+
         var playerInstance = player.getInstance();
         if (playerInstance == null) {
             return;
