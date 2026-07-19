@@ -8,9 +8,11 @@ import fr.phylisiumstudio.logic.activity.Activity;
 import fr.phylisiumstudio.logic.activity.ActivityType;
 import fr.phylisiumstudio.logic.plot.Plot;
 import fr.phylisiumstudio.logic.plot.PlotType;
+import fr.phylisiumstudio.logic.plot.PlotUpgradeService;
 import fr.phylisiumstudio.logic.service.CampsiteBuilderService;
 import fr.phylisiumstudio.logic.service.CampsiteService;
 import fr.phylisiumstudio.logic.service.InstanceService;
+import fr.phylisiumstudio.logic.service.PlotDataService;
 import fr.phylisiumstudio.logic.slot.Slot;
 import fr.phylisiumstudio.logic.slot.SlotService;
 import net.kyori.adventure.text.Component;
@@ -20,6 +22,7 @@ import net.minestom.server.command.builder.Command;
 import net.minestom.server.command.builder.arguments.ArgumentType;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * {@code /slots} : achat et définition des emplacements constructibles découverts
@@ -31,21 +34,33 @@ public class SlotsCommand extends Command {
     private final SlotService slotService;
     private final InstanceService instanceService;
     private final CampsiteBuilderService builderService;
+    private final PlotUpgradeService upgradeService;
+    private final PlotDataService plotDataService;
 
     @Inject
     public SlotsCommand(CampsiteService campsiteService, SlotService slotService,
-                        InstanceService instanceService, CampsiteBuilderService builderService) {
+                        InstanceService instanceService, CampsiteBuilderService builderService,
+                        PlotUpgradeService upgradeService, PlotDataService plotDataService) {
         super("slots");
         this.campsiteService = campsiteService;
         this.slotService = slotService;
         this.instanceService = instanceService;
         this.builderService = builderService;
+        this.upgradeService = upgradeService;
+        this.plotDataService = plotDataService;
 
         setDefaultExecutor((sender, ctx) -> showMenu(sender));
 
         var indexArg = ArgumentType.Integer("index");
         var plotTypeArg = ArgumentType.Enum("type", PlotType.class);
         var activityTypeArg = ArgumentType.Enum("type", ActivityType.class);
+        var plotIdArg = ArgumentType.Word("plotId");
+
+        addSyntax((sender, ctx) -> {
+            var campsite = CampsiteResolver.resolve(sender, campsiteService);
+            if (campsite == null) return;
+            upgradePlot(sender, campsite, ctx.get(plotIdArg));
+        }, ArgumentType.Literal("upgrade"), plotIdArg);
 
         addSyntax((sender, ctx) -> {
             var campsite = CampsiteResolver.resolve(sender, campsiteService);
@@ -136,6 +151,34 @@ public class SlotsCommand extends Command {
             builderService.buildActivityAsync(activity, instanceService.getInstance(campsite));
         }
         feedback(sender, activity != null, "Activité " + type.name() + " acquise.");
+    }
+
+    private void upgradePlot(CommandSender sender, Campsite campsite, String plotId) {
+        Plot plot;
+        try {
+            var id = UUID.fromString(plotId);
+            plot = campsite.getPlots().stream().filter(p -> p.getUniqueID().equals(id)).findFirst().orElse(null);
+        } catch (IllegalArgumentException e) {
+            plot = null;
+        }
+        if (plot == null) {
+            sender.sendMessage(Component.text("Emplacement introuvable.", NamedTextColor.RED));
+            return;
+        }
+        var data = plotDataService.getPlotData(plot.getPlotType());
+        if (!upgradeService.canUpgrade(data, plot)) {
+            sender.sendMessage(Component.text("Cet emplacement est déjà au niveau maximum.", NamedTextColor.YELLOW));
+            return;
+        }
+        long cost = upgradeService.nextCost(data, plot);
+        if (upgradeService.upgrade(campsite, data, plot)) {
+            sender.sendMessage(Component.text("Emplacement amélioré au niveau " + plot.getLevel()
+                    + " (revenu " + upgradeService.nightlyIncome(data, plot) + " $/nuit) pour " + cost + " $.",
+                    NamedTextColor.GREEN));
+        } else {
+            sender.sendMessage(Component.text("Amélioration impossible (solde insuffisant : " + cost + " $ requis).",
+                    NamedTextColor.RED));
+        }
     }
 
     private void feedback(CommandSender sender, boolean ok, String success) {

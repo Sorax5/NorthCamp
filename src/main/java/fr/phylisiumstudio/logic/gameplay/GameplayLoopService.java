@@ -9,7 +9,9 @@ import fr.phylisiumstudio.logic.clock.GamePhase;
 import fr.phylisiumstudio.logic.clock.event.PhaseChangeEvent;
 import fr.phylisiumstudio.logic.economy.MarketService;
 import fr.phylisiumstudio.logic.economy.SatisfactionService;
+import fr.phylisiumstudio.logic.plot.PlotUpgradeService;
 import fr.phylisiumstudio.logic.season.SeasonService;
+import fr.phylisiumstudio.logic.service.PlotDataService;
 import fr.phylisiumstudio.logic.staff.StaffService;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -47,6 +49,8 @@ public class GameplayLoopService {
     private final SatisfactionService satisfactionService;
     private final SeasonService seasonService;
     private final StaffService staffService;
+    private final PlotDataService plotDataService;
+    private final PlotUpgradeService plotUpgradeService;
     private final Random random;
 
     /** Solde de chaque camping au matin précédent, pour calculer le bénéfice du jour. */
@@ -58,12 +62,16 @@ public class GameplayLoopService {
                                SatisfactionService satisfactionService,
                                SeasonService seasonService,
                                StaffService staffService,
+                               PlotDataService plotDataService,
+                               PlotUpgradeService plotUpgradeService,
                                Random random) {
         this.stayService = stayService;
         this.marketService = marketService;
         this.satisfactionService = satisfactionService;
         this.seasonService = seasonService;
         this.staffService = staffService;
+        this.plotDataService = plotDataService;
+        this.plotUpgradeService = plotUpgradeService;
         this.random = random;
 
         // Nœud dédié attaché à la racine : regroupe la logique de la boucle et
@@ -117,6 +125,9 @@ public class GameplayLoopService {
 
         // Retire tous les partis (despawn par l'IA, abandons, sorties forcées).
         stayService.removeDeparted(campsite);
+
+        // Revenu passif nocturne des emplacements occupés (croît avec leur niveau).
+        collectPlotIncome(campsite);
 
         // Les séjours avancent ; ceux qui se terminent passent en LEAVING et leur
         // satisfaction finale est reportée maintenant sur la réputation.
@@ -178,6 +189,21 @@ public class GameplayLoopService {
                 .append(Component.text(label + " : ", NamedTextColor.GRAY))
                 .append(Component.text(value, valueColor))
                 .build();
+    }
+
+    /** Ajoute le revenu par nuit de chaque emplacement occupé par un client en séjour. */
+    private void collectPlotIncome(Campsite campsite) {
+        double income = 0;
+        for (var client : campsite.getClients()) {
+            if (client.getLifecycle() != ClientLifecycle.STAYING || client.getPlot() == null) {
+                continue;
+            }
+            var plot = client.getPlot();
+            income += plotUpgradeService.nightlyIncome(plotDataService.getPlotData(plot.getPlotType()), plot);
+        }
+        if (income > 0) {
+            campsite.addMoney(income);
+        }
     }
 
     /** Usure quotidienne : chaque activité opérationnelle peut tomber en panne. */

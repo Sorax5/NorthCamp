@@ -11,6 +11,8 @@ import fr.phylisiumstudio.logic.client.ClientLifecycle;
 import fr.phylisiumstudio.logic.economy.MarketService;
 import fr.phylisiumstudio.logic.plot.Plot;
 import fr.phylisiumstudio.logic.plot.PlotType;
+import fr.phylisiumstudio.logic.plot.PlotUpgradeService;
+import fr.phylisiumstudio.logic.service.PlotDataService;
 import fr.phylisiumstudio.logic.slot.Slot;
 import fr.phylisiumstudio.logic.slot.SlotService;
 import fr.phylisiumstudio.logic.staff.Staff;
@@ -32,11 +34,16 @@ public class InteractionMenus {
 
     private final MarketService marketService;
     private final SlotService slotService;
+    private final PlotUpgradeService upgradeService;
+    private final PlotDataService plotDataService;
 
     @Inject
-    public InteractionMenus(MarketService marketService, SlotService slotService) {
+    public InteractionMenus(MarketService marketService, SlotService slotService,
+                            PlotUpgradeService upgradeService, PlotDataService plotDataService) {
         this.marketService = marketService;
         this.slotService = slotService;
+        this.upgradeService = upgradeService;
+        this.plotDataService = plotDataService;
     }
 
     /** Clé de position stable (au bloc) pour identifier un slot. */
@@ -55,8 +62,10 @@ public class InteractionMenus {
                         && c.getPlot() != null && c.getPlot().getUniqueID().equals(plotId))
                 .findFirst().orElse(null);
 
+        var data = plotDataService.getPlotData(plot.getPlotType());
         var menu = ChatMenu.titled("Emplacement " + plot.getPlotType().name())
-                .text("Niveau : " + plot.getLevel(), NamedTextColor.WHITE)
+                .text("Niveau : " + plot.getLevel() + "  (revenu " + upgradeService.nightlyIncome(data, plot) + " $/nuit)",
+                        NamedTextColor.WHITE)
                 .text("Prix : " + Math.round(plot.getPrice()) + " $  (marché "
                         + Math.round(marketService.fairPrice(plot.getPlotType())) + " $)", NamedTextColor.GRAY)
                 .text("État : " + (plot.isDirty() ? "Sale" : "Propre"),
@@ -67,8 +76,16 @@ public class InteractionMenus {
         } else {
             menu.text("Libre", NamedTextColor.GRAY);
         }
-        menu.blank().line(ChatMenu.button("Gérer les tarifs", NamedTextColor.YELLOW, "/pricing", "Tarification"))
-                .footer().send(player);
+        menu.blank();
+        var pricing = ChatMenu.button("Gérer les tarifs", NamedTextColor.YELLOW, "/pricing", "Tarification");
+        if (upgradeService.canUpgrade(data, plot)) {
+            menu.line(ChatMenu.row(pricing,
+                    ChatMenu.button("Améliorer (" + upgradeService.nextCost(data, plot) + " $)", NamedTextColor.GREEN,
+                            "/slots upgrade " + plotId, "Monter d'un niveau : plus de revenu par nuit")));
+        } else {
+            menu.line(pricing);
+        }
+        menu.footer().send(player);
     }
 
     public void openActivity(Player player, Campsite campsite, UUID activityId) {
