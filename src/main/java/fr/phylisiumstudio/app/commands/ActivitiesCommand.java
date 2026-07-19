@@ -93,6 +93,11 @@ public class ActivitiesCommand extends Command {
             sender.sendMessage(Component.text("Activité améliorée au niveau " + activity.getCurrentLevel()
                     + " (capacité " + activity.getMaxClients() + ", " + Math.round(activity.getPrice())
                     + " $/passage) pour " + cost + " $.", NamedTextColor.GREEN));
+            if (sender instanceof net.minestom.server.entity.Player p) {
+                fr.phylisiumstudio.logic.effect.Toasts.task(p,
+                        Component.text(activity.getType().displayName() + " niveau " + activity.getCurrentLevel()),
+                        net.minestom.server.item.Material.FISHING_ROD);
+            }
         } else {
             sender.sendMessage(Component.text("Amélioration impossible (solde insuffisant : " + cost + " $ requis).",
                     NamedTextColor.RED));

@@ -11,10 +11,12 @@ import fr.phylisiumstudio.logic.economy.MarketService;
 import fr.phylisiumstudio.logic.amenity.AmenityService;
 import fr.phylisiumstudio.logic.economy.SatisfactionService;
 import fr.phylisiumstudio.logic.economy.SolvencyService;
+import fr.phylisiumstudio.logic.effect.Toasts;
 import fr.phylisiumstudio.logic.plot.PlotUpgradeService;
 import fr.phylisiumstudio.logic.rating.RatingService;
 import fr.phylisiumstudio.logic.season.SeasonService;
 import fr.phylisiumstudio.logic.service.PlotDataService;
+import net.minestom.server.item.Material;
 import fr.phylisiumstudio.logic.staff.StaffService;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -104,6 +106,30 @@ public class GameplayLoopService {
         if (event.phase() == GamePhase.DAY) {
             var summary = openNewDay(event.campsite(), event.dayNumber());
             renderSummary(event.getInstance(), summary);
+            notifyOwner(event.campsite(), summary);
+        }
+    }
+
+    /** Envoie les toasts des moments marquants du jour au propriétaire du camping. */
+    private void notifyOwner(Campsite campsite, DaySummary s) {
+        var player = MinecraftServer.getConnectionManager().getOnlinePlayerByUuid(campsite.getOwnerID());
+        if (player == null) {
+            return;
+        }
+        if (s.starMilestone()) {
+            Toasts.goal(player, Component.text(RatingService.render(s.stars()) + " — nouveau palier !"),
+                    Material.NETHER_STAR);
+        }
+        if (s.event() != null) {
+            var mat = switch (s.event()) {
+                case STORM -> Material.WATER_BUCKET;
+                case BEAR -> Material.LEATHER;
+                case FESTIVAL -> Material.FIREWORK_ROCKET;
+            };
+            Toasts.task(player, Component.text(s.event().displayName()), mat);
+        }
+        if (s.bankrupted()) {
+            Toasts.challenge(player, Component.text("Faillite ! Renflouement d'urgence"), Material.REDSTONE_BLOCK);
         }
     }
 

@@ -175,6 +175,11 @@ public class SlotsCommand extends Command {
             sender.sendMessage(Component.text("Emplacement amélioré au niveau " + plot.getLevel()
                     + " (revenu " + upgradeService.nightlyIncome(data, plot) + " $/nuit) pour " + cost + " $.",
                     NamedTextColor.GREEN));
+            if (sender instanceof net.minestom.server.entity.Player p) {
+                fr.phylisiumstudio.logic.effect.Toasts.task(p,
+                        Component.text(plot.getPlotType().displayName() + " niveau " + plot.getLevel()),
+                        net.minestom.server.item.Material.OAK_SAPLING);
+            }
         } else {
             sender.sendMessage(Component.text("Amélioration impossible (solde insuffisant : " + cost + " $ requis).",
                     NamedTextColor.RED));

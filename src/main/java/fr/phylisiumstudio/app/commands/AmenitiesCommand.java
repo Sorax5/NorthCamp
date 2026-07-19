@@ -37,6 +37,11 @@ public class AmenitiesCommand extends Command {
             if (amenityService.build(campsite, amenity)) {
                 sender.sendMessage(Component.text(amenity.displayName() + " construit(e) pour "
                         + amenity.cost() + " $.", NamedTextColor.GREEN));
+                if (sender instanceof net.minestom.server.entity.Player p) {
+                    fr.phylisiumstudio.logic.effect.Toasts.goal(p,
+                            Component.text("Service ajouté : " + amenity.displayName()),
+                            net.minestom.server.item.Material.BELL);
+                }
             } else {
                 sender.sendMessage(Component.text("Construction impossible (déjà présent ou solde insuffisant : "
                         + amenity.cost() + " $).", NamedTextColor.RED));
