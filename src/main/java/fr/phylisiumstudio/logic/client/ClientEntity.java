@@ -24,6 +24,7 @@ public class ClientEntity extends EntityCreature {
     private final ClientMemory memory;
     private final BehaviorTree<ClientEntity> behaviorTree;
     private ClientLifecycle lastLifecycle;
+    private String currentAction = "";
 
     public ClientEntity(ClientMemory memory) {
         this(memory, null);
@@ -71,18 +72,46 @@ public class ClientEntity extends EntityCreature {
                 Effects.assigned(getInstance(), getPosition());
             }
             lastLifecycle = lifecycle;
+            refreshNameplate();
         }
     }
 
     public void setCurrentAction(String action) {
-        var state = memory.getClient().getAction();
+        this.currentAction = action;
+        refreshNameplate();
+    }
+
+    /** Nametag = émote d'humeur + état + action courante. */
+    private void refreshNameplate() {
+        var client = memory.getClient();
+        var state = client.getAction();
         var stateName = state != null ? state.toString() : "?";
         var txt = Component.text()
+                .append(Component.text(moodEmote(client) + " ", moodColor(client)))
                 .append(Component.text(stateName, NamedTextColor.GREEN))
                 .append(Component.text(" - "))
-                .append(Component.text(action, NamedTextColor.YELLOW))
+                .append(Component.text(currentAction, NamedTextColor.YELLOW))
                 .build();
 
         this.set(DataComponents.CUSTOM_NAME, txt);
+    }
+
+    /** Symbole d'humeur lisible d'un coup d'œil (attente, content, mécontent). */
+    private static String moodEmote(Client client) {
+        if (client.getLifecycle() == ClientLifecycle.WAITING) {
+            return "⏳";
+        }
+        return client.getSatisfaction() < 40 ? "☹" : "☺";
+    }
+
+    private static NamedTextColor moodColor(Client client) {
+        if (client.getLifecycle() == ClientLifecycle.WAITING) {
+            return NamedTextColor.AQUA;
+        }
+        double sat = client.getSatisfaction();
+        if (sat < 40) {
+            return NamedTextColor.RED;
+        }
+        return sat >= 70 ? NamedTextColor.GREEN : NamedTextColor.YELLOW;
     }
 }
