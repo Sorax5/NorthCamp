@@ -5,6 +5,8 @@ import fr.phylisiumstudio.app.menu.CampsiteResolver;
 import fr.phylisiumstudio.app.menu.ChatMenu;
 import fr.phylisiumstudio.logic.Campsite;
 import fr.phylisiumstudio.logic.activity.Activity;
+import fr.phylisiumstudio.logic.activity.ActivityUpgradeService;
+import fr.phylisiumstudio.logic.service.ActivityDataService;
 import fr.phylisiumstudio.logic.service.CampsiteService;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -22,11 +24,17 @@ import java.util.function.Consumer;
 public class ActivitiesCommand extends Command {
 
     private final CampsiteService campsiteService;
+    private final ActivityUpgradeService upgradeService;
+    private final ActivityDataService activityDataService;
 
     @Inject
-    public ActivitiesCommand(CampsiteService campsiteService) {
+    public ActivitiesCommand(CampsiteService campsiteService,
+                             ActivityUpgradeService upgradeService,
+                             ActivityDataService activityDataService) {
         super("activities");
         this.campsiteService = campsiteService;
+        this.upgradeService = upgradeService;
+        this.activityDataService = activityDataService;
 
         setDefaultExecutor((sender, ctx) -> showMenu(sender));
 
@@ -42,6 +50,38 @@ public class ActivitiesCommand extends Command {
             activity.setPrice(Math.max(0, activity.getPrice() + ctx.get(amountArg)));
             showMenu(sender);
         }), ArgumentType.Literal("price"), idArg, amountArg);
+
+        addSyntax((sender, ctx) -> withCampsiteActivity(sender, UUID.fromString(ctx.get(idArg)), (campsite, activity) -> {
+            upgradeActivity(sender, campsite, activity);
+            showMenu(sender);
+        }), ArgumentType.Literal("upgrade"), idArg);
+    }
+
+    private void upgradeActivity(CommandSender sender, Campsite campsite, Activity activity) {
+        var data = activityDataService.getActivityData(activity.getType());
+        if (!upgradeService.canUpgrade(data, activity)) {
+            sender.sendMessage(Component.text("Cette activité est déjà au niveau maximum.", NamedTextColor.YELLOW));
+            return;
+        }
+        long cost = upgradeService.nextCost(data, activity);
+        if (upgradeService.upgrade(campsite, data, activity)) {
+            sender.sendMessage(Component.text("Activité améliorée au niveau " + activity.getCurrentLevel()
+                    + " (capacité " + activity.getMaxClients() + ", " + Math.round(activity.getPrice())
+                    + " $/passage) pour " + cost + " $.", NamedTextColor.GREEN));
+        } else {
+            sender.sendMessage(Component.text("Amélioration impossible (solde insuffisant : " + cost + " $ requis).",
+                    NamedTextColor.RED));
+        }
+    }
+
+    private void withCampsiteActivity(CommandSender sender, UUID activityId,
+                                      java.util.function.BiConsumer<Campsite, Activity> action) {
+        var campsite = CampsiteResolver.resolve(sender, campsiteService);
+        if (campsite == null) return;
+        campsite.getActivities().stream()
+                .filter(a -> a.getUniqueID().equals(activityId))
+                .findFirst()
+                .ifPresent(activity -> action.accept(campsite, activity));
     }
 
     private void withActivity(CommandSender sender, UUID activityId, Consumer<Activity> action) {
@@ -67,7 +107,8 @@ public class ActivitiesCommand extends Command {
                     : Component.text(" ● en panne", NamedTextColor.RED);
             menu.line(Component.text(activity.getType().name(), NamedTextColor.AQUA)
                     .append(Component.text(" niv." + activity.getCurrentLevel()
-                            + " — " + Math.round(activity.getPrice()) + " $", NamedTextColor.GRAY))
+                            + " — " + Math.round(activity.getPrice()) + " $ — cap." + activity.getMaxClients(),
+                            NamedTextColor.GRAY))
                     .append(status));
 
             var row = ChatMenu.row(
@@ -76,6 +117,13 @@ public class ActivitiesCommand extends Command {
                     activity.isOperational()
                             ? Component.text("[OK]", NamedTextColor.DARK_GRAY)
                             : ChatMenu.button("Réparer", NamedTextColor.YELLOW, "/activities repair " + activity.getUniqueID(), "Remettre en service"));
+
+            var data = activityDataService.getActivityData(activity.getType());
+            if (upgradeService.canUpgrade(data, activity)) {
+                row = ChatMenu.row(row,
+                        ChatMenu.button("Améliorer (" + upgradeService.nextCost(data, activity) + " $)", NamedTextColor.GOLD,
+                                "/activities upgrade " + activity.getUniqueID(), "Monter d'un niveau : +capacité, +revenu"));
+            }
             menu.line(row);
         }
 

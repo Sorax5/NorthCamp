@@ -6,6 +6,8 @@ import fr.phylisiumstudio.app.menu.ChatMenu;
 import fr.phylisiumstudio.logic.Campsite;
 import fr.phylisiumstudio.logic.activity.Activity;
 import fr.phylisiumstudio.logic.activity.ActivityType;
+import fr.phylisiumstudio.logic.activity.ActivityUpgradeService;
+import fr.phylisiumstudio.logic.service.ActivityDataService;
 import fr.phylisiumstudio.logic.client.Client;
 import fr.phylisiumstudio.logic.client.ClientLifecycle;
 import fr.phylisiumstudio.logic.economy.MarketService;
@@ -36,14 +38,19 @@ public class InteractionMenus {
     private final SlotService slotService;
     private final PlotUpgradeService upgradeService;
     private final PlotDataService plotDataService;
+    private final ActivityUpgradeService activityUpgradeService;
+    private final ActivityDataService activityDataService;
 
     @Inject
     public InteractionMenus(MarketService marketService, SlotService slotService,
-                            PlotUpgradeService upgradeService, PlotDataService plotDataService) {
+                            PlotUpgradeService upgradeService, PlotDataService plotDataService,
+                            ActivityUpgradeService activityUpgradeService, ActivityDataService activityDataService) {
         this.marketService = marketService;
         this.slotService = slotService;
         this.upgradeService = upgradeService;
         this.plotDataService = plotDataService;
+        this.activityUpgradeService = activityUpgradeService;
+        this.activityDataService = activityDataService;
     }
 
     /** Clé de position stable (au bloc) pour identifier un slot. */
@@ -106,8 +113,14 @@ public class InteractionMenus {
                         ChatMenu.button("+1", NamedTextColor.GREEN, "/activities price " + activityId + " 1", "Augmenter le prix"),
                         activity.isOperational()
                                 ? Component.text("[OK]", NamedTextColor.DARK_GRAY)
-                                : ChatMenu.button("Réparer", NamedTextColor.YELLOW, "/activities repair " + activityId, "Remettre en service")))
-                .footer();
+                                : ChatMenu.button("Réparer", NamedTextColor.YELLOW, "/activities repair " + activityId, "Remettre en service")));
+
+        var activityData = activityDataService.getActivityData(activity.getType());
+        if (activityUpgradeService.canUpgrade(activityData, activity)) {
+            menu.line(ChatMenu.button("Améliorer (" + activityUpgradeService.nextCost(activityData, activity) + " $)",
+                    NamedTextColor.GOLD, "/activities upgrade " + activityId, "Monter d'un niveau : +capacité, +revenu"));
+        }
+        menu.footer();
         menu.send(player);
     }
 
