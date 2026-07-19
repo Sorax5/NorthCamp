@@ -5,6 +5,7 @@ import com.google.inject.Singleton;
 import fr.phylisiumstudio.app.App;
 import fr.phylisiumstudio.logic.Campsite;
 import fr.phylisiumstudio.logic.clock.GameClockService;
+import fr.phylisiumstudio.logic.gameplay.ArrivalService;
 import fr.phylisiumstudio.logic.mapper.PositionMapper;
 import fr.phylisiumstudio.logic.marker.MarkerRegistry;
 import fr.phylisiumstudio.logic.seed.CampsiteSeeder;
@@ -41,6 +42,7 @@ public class CampsiteView {
     private final CampsiteService campsiteService;
     private final InstanceService instanceService;
     private final GameClockService gameClockService;
+    private final ArrivalService arrivalService;
     private final CampsiteSeeder campsiteSeeder;
     private final SkinLibrary skinLibrary;
     private final MarkerRegistry markerRegistry;
@@ -53,6 +55,7 @@ public class CampsiteView {
     public CampsiteView(CampsiteService campsiteService,
                         InstanceService instanceService,
                         GameClockService gameClockService,
+                        ArrivalService arrivalService,
                         CampsiteSeeder campsiteSeeder,
                         SkinLibrary skinLibrary,
                         MarkerRegistry markerRegistry,
@@ -66,6 +69,7 @@ public class CampsiteView {
         this.campsiteService = campsiteService;
         this.instanceService = instanceService;
         this.gameClockService = gameClockService;
+        this.arrivalService = arrivalService;
         this.campsiteSeeder = campsiteSeeder;
         this.skinLibrary = skinLibrary;
         this.markerRegistry = markerRegistry;
@@ -109,6 +113,7 @@ public class CampsiteView {
         player.setRespawnPoint(PositionMapper.toMinestomPos(spawnPoint));
 
         gameClockService.start(campsite, instanceContainer);
+        arrivalService.start(campsite);
         var reception = layoutService.receptionPosition();
         var exit = layoutService.exitPosition();
         this.clientsStateViews.add(new ClientView(campsite, instanceContainer, reception, exit, skinLibrary, random));
@@ -157,6 +162,7 @@ public class CampsiteView {
             });
 
             gameClockService.stop(campsite.getUniqueID());
+            arrivalService.stop(campsite.getUniqueID());
 
             try {
                 instanceService.releaseInstance(campsite);
