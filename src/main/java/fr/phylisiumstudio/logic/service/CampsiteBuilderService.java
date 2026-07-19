@@ -4,7 +4,9 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import fr.phylisiumstudio.logic.Campsite;
 import fr.phylisiumstudio.logic.activity.Activity;
+import fr.phylisiumstudio.logic.amenity.AmenityInstance;
 import fr.phylisiumstudio.logic.builder.ActivityBuilder;
+import fr.phylisiumstudio.logic.builder.AmenityBuilder;
 import fr.phylisiumstudio.logic.builder.PlotBuilder;
 import fr.phylisiumstudio.logic.plot.Plot;
 import net.minestom.server.instance.InstanceContainer;
@@ -18,14 +20,17 @@ import java.util.concurrent.CompletableFuture;
 public class CampsiteBuilderService {
     private final PlotBuilder plotBuilder;
     private final ActivityBuilder activityBuilder;
+    private final AmenityBuilder amenityBuilder;
     private final PlotDataService plotDataService;
     private final ActivityDataService activityDataService;
     private final Logger logger = LoggerFactory.getLogger(CampsiteBuilderService.class);
 
     @Inject
-    public CampsiteBuilderService(PlotBuilder plotBuilder, ActivityBuilder activityBuilder, PlotDataService plotDataService, ActivityDataService activityDataService) {
+    public CampsiteBuilderService(PlotBuilder plotBuilder, ActivityBuilder activityBuilder, AmenityBuilder amenityBuilder,
+                                  PlotDataService plotDataService, ActivityDataService activityDataService) {
         this.plotBuilder = plotBuilder;
         this.activityBuilder = activityBuilder;
+        this.amenityBuilder = amenityBuilder;
         this.activityDataService = activityDataService;
         this.plotDataService = plotDataService;
     }
@@ -41,7 +46,19 @@ public class CampsiteBuilderService {
             futures.add(buildPlotAsync(plot, instanceContainer));
         }
 
+        for (var amenity : campsite.getBuiltAmenities()) {
+            futures.add(buildAmenityAsync(amenity, instanceContainer));
+        }
+
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+    }
+
+    /** Construit une seule commodité dans l'instance (achat à chaud). */
+    public CompletableFuture<Void> buildAmenityAsync(AmenityInstance amenity, InstanceContainer instanceContainer) {
+        if (amenityBuilder == null) {
+            return CompletableFuture.completedFuture(null);
+        }
+        return amenityBuilder.BuildAsync(amenity, instanceContainer);
     }
 
     /** Construit un seul emplacement de camping dans l'instance (achat à chaud). */

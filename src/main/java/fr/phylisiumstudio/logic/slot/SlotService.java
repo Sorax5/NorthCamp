@@ -6,6 +6,8 @@ import fr.phylisiumstudio.logic.Campsite;
 import fr.phylisiumstudio.logic.activity.Activity;
 import fr.phylisiumstudio.logic.activity.ActivitySupplyService;
 import fr.phylisiumstudio.logic.activity.ActivityType;
+import fr.phylisiumstudio.logic.amenity.Amenity;
+import fr.phylisiumstudio.logic.amenity.AmenityInstance;
 import fr.phylisiumstudio.logic.economy.EconomyService;
 import fr.phylisiumstudio.logic.economy.MarketService;
 import fr.phylisiumstudio.logic.plot.Plot;
@@ -53,6 +55,31 @@ public class SlotService {
     public List<Slot> availableActivitySlots(Campsite campsite) {
         var occupied = roundedPositions(campsite.getActivities().stream().map(Activity::getPosition).toList());
         return filterAvailable(layoutService.activitySlotPositions(), occupied, SlotKind.ACTIVITY);
+    }
+
+    /** Emplacements de commodité encore libres (non déjà occupés par une commodité construite). */
+    public List<Slot> availableAmenitySlots(Campsite campsite) {
+        var occupied = roundedPositions(campsite.getBuiltAmenities().stream().map(AmenityInstance::position).toList());
+        return filterAvailable(layoutService.amenitySlotPositions(), occupied, SlotKind.AMENITY);
+    }
+
+    /**
+     * Construit une commodité du type choisi sur un emplacement de commodité libre.
+     * Chaque type ne peut être construit qu'une fois.
+     *
+     * @return l'{@link AmenityInstance} créée, ou {@code null} si l'achat a échoué
+     *         (fonds insuffisants, slot pris, ou type déjà construit).
+     */
+    public AmenityInstance buyAmenity(Campsite campsite, Vector3d position, Amenity type) {
+        if (campsite.hasAmenity(type)
+                || campsite.getMoney() < type.cost()
+                || !isAvailable(availableAmenitySlots(campsite), position)) {
+            return null;
+        }
+        economyService.charge(campsite, type.cost());
+        var instance = new AmenityInstance(type, new Vector3d(position));
+        campsite.addAmenity(instance);
+        return instance;
     }
 
     /**

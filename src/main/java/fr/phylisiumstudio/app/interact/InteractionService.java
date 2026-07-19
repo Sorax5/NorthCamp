@@ -65,6 +65,7 @@ public class InteractionService {
             case InteractionTags.CLIENT -> withUuid(id, u -> menus.openClient(player, campsite, u));
             case InteractionTags.SLOT_PLOT -> menus.openSlot(player, campsite, true, id);
             case InteractionTags.SLOT_ACTIVITY -> menus.openSlot(player, campsite, false, id);
+            case InteractionTags.SLOT_AMENITY -> menus.openAmenitySlot(player, campsite, id);
             default -> { /* type inconnu : rien */ }
         }
     }

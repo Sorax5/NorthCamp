@@ -4,15 +4,13 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import fr.phylisiumstudio.logic.activity.Activity;
 import fr.phylisiumstudio.logic.amenity.Amenity;
+import fr.phylisiumstudio.logic.amenity.AmenityInstance;
 import fr.phylisiumstudio.logic.client.Client;
 import fr.phylisiumstudio.logic.plot.Plot;
 import fr.phylisiumstudio.logic.staff.Staff;
 import lombok.Getter;
 
-import java.util.Collection;
-import java.util.EnumSet;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -30,7 +28,7 @@ public class Campsite {
     private final List<Staff> staff;
 
     /** Aménagements construits (sanitaires, épicerie…), au bénéfice de tout le camping. */
-    private final Set<Amenity> amenities;
+    private final List<AmenityInstance> builtAmenities;
 
     private double money = 0;
 
@@ -44,7 +42,7 @@ public class Campsite {
         this.plots = new CopyOnWriteArrayList<>();
         this.clients = new CopyOnWriteArrayList<>();
         this.staff = new CopyOnWriteArrayList<>();
-        this.amenities = EnumSet.noneOf(Amenity.class);
+        this.builtAmenities = new CopyOnWriteArrayList<>();
     }
 
     @JsonCreator
@@ -57,7 +55,7 @@ public class Campsite {
             @JsonProperty("staff") List<Staff> staff,
             @JsonProperty("money") double money,
             @JsonProperty("reputation") double reputation,
-            @JsonProperty("amenities") Collection<Amenity> amenities
+            @JsonProperty("builtAmenities") List<AmenityInstance> amenities
     ) {
         this.uniqueID = uniqueID;
         this.ownerID = ownerID;
@@ -67,10 +65,9 @@ public class Campsite {
         this.staff = new CopyOnWriteArrayList<>(staff != null ? staff : List.of());
         this.money = money;
         this.reputation = reputation;
-        // Ancienne sauvegarde sans aménagements : ensemble vide par défaut.
-        this.amenities = (amenities == null || amenities.isEmpty())
-                ? EnumSet.noneOf(Amenity.class)
-                : EnumSet.copyOf(amenities);
+        // Champ renommé « builtAmenities » : l'ancien « amenities » (noms d'enum)
+        // devient une propriété inconnue ignorée → migration sans perte du camping.
+        this.builtAmenities = new CopyOnWriteArrayList<>(amenities != null ? amenities : List.of());
     }
 
     public void addActivity(Activity activity) {
@@ -90,11 +87,11 @@ public class Campsite {
     }
 
     public boolean hasAmenity(Amenity amenity) {
-        return this.amenities.contains(amenity);
+        return this.builtAmenities.stream().anyMatch(a -> a.type() == amenity);
     }
 
-    public void addAmenity(Amenity amenity) {
-        this.amenities.add(amenity);
+    public void addAmenity(AmenityInstance amenity) {
+        this.builtAmenities.add(amenity);
     }
 
     public void addMoney(double amount) {

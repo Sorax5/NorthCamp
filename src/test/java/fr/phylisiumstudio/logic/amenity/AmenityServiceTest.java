@@ -1,7 +1,7 @@
 package fr.phylisiumstudio.logic.amenity;
 
 import fr.phylisiumstudio.logic.Campsite;
-import fr.phylisiumstudio.logic.economy.EconomyService;
+import org.joml.Vector3d;
 import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
@@ -10,27 +10,16 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class AmenityServiceTest {
 
-    private final AmenityService service = new AmenityService(new EconomyService());
+    private final AmenityService service = new AmenityService();
 
     @Test
-    void buildChargesCostAndMarksBuilt() {
+    void buildableExcludesAlreadyBuiltTypes() {
         var campsite = new Campsite(UUID.randomUUID());
-        campsite.addMoney(5_000);
+        assertEquals(Amenity.values().length, service.buildable(campsite).size());
 
-        assertTrue(service.build(campsite, Amenity.SHOWERS));
-        assertTrue(campsite.hasAmenity(Amenity.SHOWERS));
-        assertEquals(5_000 - Amenity.SHOWERS.cost(), campsite.getMoney());
+        campsite.addAmenity(new AmenityInstance(Amenity.SHOWERS, new Vector3d()));
         assertFalse(service.buildable(campsite).contains(Amenity.SHOWERS));
-    }
-
-    @Test
-    void cannotBuildTwiceOrWithoutFunds() {
-        var campsite = new Campsite(UUID.randomUUID());
-        campsite.addMoney(Amenity.WIFI.cost());
-
-        assertTrue(service.build(campsite, Amenity.WIFI));
-        assertFalse(service.build(campsite, Amenity.WIFI));           // déjà construit
-        assertFalse(service.build(campsite, Amenity.SHOP));           // solde à 0
+        assertEquals(Amenity.values().length - 1, service.buildable(campsite).size());
     }
 
     @Test
@@ -38,9 +27,8 @@ class AmenityServiceTest {
         var campsite = new Campsite(UUID.randomUUID());
         assertEquals(0.0, service.dailyComfortBonus(campsite));
 
-        campsite.addMoney(100_000);
-        service.build(campsite, Amenity.SHOWERS);
-        service.build(campsite, Amenity.SHOP);
+        campsite.addAmenity(new AmenityInstance(Amenity.SHOWERS, new Vector3d()));
+        campsite.addAmenity(new AmenityInstance(Amenity.SHOP, new Vector3d()));
         assertEquals(2 * AmenityService.COMFORT_PER_AMENITY, service.dailyComfortBonus(campsite));
     }
 }

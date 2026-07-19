@@ -103,7 +103,7 @@ public class ObjectivesView {
         set(checkIn, campsite.getClients().stream().anyMatch(c -> c.getLifecycle() == ClientLifecycle.STAYING));
         set(activity, !campsite.getActivities().isEmpty());
         set(staff, !campsite.getStaff().isEmpty());
-        set(amenity, !campsite.getAmenities().isEmpty());
+        set(amenity, !campsite.getBuiltAmenities().isEmpty());
         set(upgrade, campsite.getPlots().stream().anyMatch(p -> p.getLevel() > 0));
         set(star3, stars >= 3);
         set(star5, stars >= RatingService.MAX_STARS);

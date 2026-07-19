@@ -1,6 +1,7 @@
 package fr.phylisiumstudio.logic.slot;
 
 import fr.phylisiumstudio.logic.Campsite;
+import fr.phylisiumstudio.logic.amenity.Amenity;
 import fr.phylisiumstudio.logic.economy.EconomyService;
 import fr.phylisiumstudio.logic.economy.MarketService;
 import fr.phylisiumstudio.logic.plot.PlotType;
@@ -59,6 +60,38 @@ class SlotServiceTest {
         var target = service.availablePlotSlots(campsite).get(0).position();
         assertNull(service.buyPlot(campsite, target, PlotType.CAMPSITE));
         assertTrue(campsite.getPlots().isEmpty());
+    }
+
+    @Test
+    void buyingAmenityChargesOccupiesSlotAndBlocksDuplicate() {
+        var service = service();
+        var campsite = new Campsite(UUID.randomUUID());
+        campsite.addMoney(10_000);
+
+        var slots = service.availableAmenitySlots(campsite);
+        int before = slots.size();
+        assertTrue(before > 0);
+        var target = slots.get(0).position();
+
+        var built = service.buyAmenity(campsite, target, Amenity.LAUNDRY);
+        assertNotNull(built);
+        assertEquals(Amenity.LAUNDRY, built.type());
+        assertTrue(campsite.hasAmenity(Amenity.LAUNDRY));
+        assertEquals(10_000 - Amenity.LAUNDRY.cost(), campsite.getMoney());
+        assertEquals(before - 1, service.availableAmenitySlots(campsite).size());
+
+        // Même type déjà construit : refusé.
+        var other = service.availableAmenitySlots(campsite).get(0).position();
+        assertNull(service.buyAmenity(campsite, other, Amenity.LAUNDRY));
+    }
+
+    @Test
+    void amenityPurchaseFailsWithoutFunds() {
+        var service = service();
+        var campsite = new Campsite(UUID.randomUUID());
+        campsite.addMoney(10);
+        var target = service.availableAmenitySlots(campsite).get(0).position();
+        assertNull(service.buyAmenity(campsite, target, Amenity.SHOP));
     }
 
     @Test

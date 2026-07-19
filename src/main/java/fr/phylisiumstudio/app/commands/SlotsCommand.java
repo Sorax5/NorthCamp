@@ -54,6 +54,7 @@ public class SlotsCommand extends Command {
         var indexArg = ArgumentType.Integer("index");
         var plotTypeArg = ArgumentType.Enum("type", PlotType.class);
         var activityTypeArg = ArgumentType.Enum("type", ActivityType.class);
+        var amenityTypeArg = ArgumentType.Enum("type", fr.phylisiumstudio.logic.amenity.Amenity.class);
         var plotIdArg = ArgumentType.Word("plotId");
 
         addSyntax((sender, ctx) -> {
@@ -75,6 +76,13 @@ public class SlotsCommand extends Command {
             buyActivity(sender, campsite, ctx.get(indexArg), ctx.get(activityTypeArg));
             showMenu(sender);
         }, ArgumentType.Literal("buyactivity"), indexArg, activityTypeArg);
+
+        addSyntax((sender, ctx) -> {
+            var campsite = CampsiteResolver.resolve(sender, campsiteService);
+            if (campsite == null) return;
+            buyAmenity(sender, campsite, ctx.get(indexArg), ctx.get(amenityTypeArg));
+            showMenu(sender);
+        }, ArgumentType.Literal("buyamenity"), indexArg, amenityTypeArg);
     }
 
     private void showMenu(CommandSender sender) {
@@ -151,6 +159,24 @@ public class SlotsCommand extends Command {
             builderService.buildActivityAsync(activity, instanceService.getInstance(campsite));
         }
         feedback(sender, activity != null, "Activité " + type.name() + " acquise.");
+    }
+
+    private void buyAmenity(CommandSender sender, Campsite campsite, int index, fr.phylisiumstudio.logic.amenity.Amenity type) {
+        var slots = slotService.availableAmenitySlots(campsite);
+        if (index < 0 || index >= slots.size()) {
+            sender.sendMessage(Component.text("Emplacement introuvable.", NamedTextColor.RED));
+            return;
+        }
+        var amenity = slotService.buyAmenity(campsite, slots.get(index).position(), type);
+        if (amenity != null) {
+            builderService.buildAmenityAsync(amenity, instanceService.getInstance(campsite));
+            if (sender instanceof net.minestom.server.entity.Player p) {
+                fr.phylisiumstudio.logic.effect.Toasts.goal(p,
+                        Component.text("Service construit : " + type.displayName()),
+                        net.minestom.server.item.Material.BELL);
+            }
+        }
+        feedback(sender, amenity != null, type.displayName() + " construit(e).");
     }
 
     private void upgradePlot(CommandSender sender, Campsite campsite, String plotId) {

@@ -7,6 +7,7 @@ import fr.phylisiumstudio.logic.Campsite;
 import fr.phylisiumstudio.logic.activity.Activity;
 import fr.phylisiumstudio.logic.activity.ActivityType;
 import fr.phylisiumstudio.logic.activity.ActivityUpgradeService;
+import fr.phylisiumstudio.logic.amenity.Amenity;
 import fr.phylisiumstudio.logic.service.ActivityDataService;
 import fr.phylisiumstudio.logic.client.Client;
 import fr.phylisiumstudio.logic.client.ClientLifecycle;
@@ -223,6 +224,36 @@ public class InteractionMenus {
                         at.consumesSupplies() ? "Consomme des fournitures, tarif plus élevé" : "Sans fourniture");
             }
             menu.line(ChatMenu.row(parts));
+        }
+        menu.footer().send(player);
+    }
+
+    public void openAmenitySlot(Player player, Campsite campsite, String posKey) {
+        var slots = slotService.availableAmenitySlots(campsite);
+        int index = -1;
+        for (var slot : slots) {
+            if (slotKey(slot.position()).equals(posKey)) {
+                index = slot.index();
+                break;
+            }
+        }
+        if (index < 0) {
+            player.sendMessage(Component.text("Cet emplacement n'est plus disponible.", NamedTextColor.RED));
+            return;
+        }
+
+        var menu = ChatMenu.titled("Service à construire");
+        var buildable = java.util.Arrays.stream(Amenity.values())
+                .filter(a -> !campsite.hasAmenity(a))
+                .toList();
+        if (buildable.isEmpty()) {
+            menu.text("Tous les services sont déjà construits.", NamedTextColor.GRAY);
+        } else {
+            menu.text("Chaque service construit rend les campeurs plus heureux.", NamedTextColor.GRAY).blank();
+            for (var amenity : buildable) {
+                menu.line(ChatMenu.button(amenity.displayName() + " (" + amenity.cost() + " $)", NamedTextColor.YELLOW,
+                        "/slots buyamenity " + index + " " + amenity.name(), "Construire " + amenity.displayName()));
+            }
         }
         menu.footer().send(player);
     }
